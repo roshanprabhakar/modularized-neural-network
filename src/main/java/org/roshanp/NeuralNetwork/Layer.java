@@ -1,5 +1,7 @@
 package org.roshanp.NeuralNetwork;
 
+import org.roshanp.NeuralNetwork.Activations.Sigmoid;
+
 public class Layer implements NetworkConstants {
 
     private Perceptron[] neurons;
@@ -7,7 +9,7 @@ public class Layer implements NetworkConstants {
     public Layer(int numberOfPerceptrons, int dataLength) {
         neurons = new Perceptron[numberOfPerceptrons];
         for (int i = 0; i < neurons.length; i++) {
-            neurons[i] = new Perceptron(dataLength, TARGET, LEARNING_RATE, EPOCHS, POWER, true); //data length for networks is just length of activation vector
+            neurons[i] = new Perceptron(new Sigmoid(), dataLength, true);
         }
     }
 

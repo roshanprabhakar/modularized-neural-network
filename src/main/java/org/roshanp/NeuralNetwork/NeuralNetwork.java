@@ -1,21 +1,32 @@
 package org.roshanp.NeuralNetwork;
 
+import org.roshanp.NeuralNetwork.Activations.Sigmoid;
+
 import java.util.ArrayList;
 
-public class NeuralNetwork implements NetworkConstants {
+public class NeuralNetwork {
 
+    //primary network object
     private ArrayList<Layer> network;
+
+    //input data dimension
     private int inputSize;
 
-    //learningRate * mazMomentum = largest possible step size
+    //learningRate * maxMomentum = largest possible step size
     private double learningRate;
     private double maxMomentum;
 
-    //lower bounds for training
+    //training ends when gradient momentum reaches or surpasses minMomentum
     private double minMomentum;
-    private double lossSeparator;
 
-    public NeuralNetwork(int[] layers, int inputSize, double learningRate, double maxMomentum, double minMomentum, double lossSeparator) {
+    /**
+     * @param layers layers[i] corresponds to the number of neurons at layer i in the network,
+     * @param inputSize input dimension
+     * @param learningRate one of the factors for each component of the gradient
+     * @param maxMomentum max bounds for accelerating gradient updates
+     * @param minMomentum min bounds for decelerating gradient updates
+     */
+    public NeuralNetwork(int[] layers, int inputSize, double learningRate, double maxMomentum, double minMomentum) {
         network = new ArrayList<>();
         network.add(new Layer(layers[0], inputSize));
         for (int layer = 1; layer < layers.length; layer++) {
@@ -25,10 +36,17 @@ public class NeuralNetwork implements NetworkConstants {
         this.learningRate = learningRate;
         this.maxMomentum = maxMomentum;
         this.minMomentum = minMomentum;
-        this.lossSeparator = lossSeparator;
     }
 
-    public NeuralNetwork(int inputSize, int neuronsPerHidden, int numHiddenLayers, double learningRate, double maxMomentum, double minMomentum, double lossSeparator) {
+    /**
+     * @param inputSize input dimension
+     * @param neuronsPerHidden constant neuron count among all layers
+     * @param numHiddenLayers number of layers in the network, including the output layer
+     * @param learningRate one of the factors for each component of the gradient
+     * @param maxMomentum max bounds for accelerating gradient updates
+     * @param minMomentum min bounds for decelerating gradient updates
+     */
+    public NeuralNetwork(int inputSize, int neuronsPerHidden, int numHiddenLayers, double learningRate, double maxMomentum, double minMomentum) {
         network = new ArrayList<>();
         network.add(new Layer(neuronsPerHidden, inputSize));
         for (int i = 0; i < numHiddenLayers - 1; i++) {
@@ -38,9 +56,9 @@ public class NeuralNetwork implements NetworkConstants {
         this.learningRate = learningRate;
         this.maxMomentum = maxMomentum;
         this.minMomentum = minMomentum;
-        this.lossSeparator = lossSeparator;
     }
 
+    //randomly reset all weights and biases
     private void reinitializeWeightsAndBiases(double scope) {
         for (int layer = 0; layer < network.size(); layer++) {
             for (int neuron = 0; neuron < network.get(layer).length(); neuron++) {
@@ -52,7 +70,7 @@ public class NeuralNetwork implements NetworkConstants {
         }
     }
 
-    //Customized for sigmoid activations active in every neuron
+    //customized for sigmoid activations active in every neuron
     public ForwardPropOutput forwardProp(Vector input) {
         Vector[] matrix = new Vector[network.size()];
         Vector passed = network.get(0).activations(input);
@@ -64,6 +82,7 @@ public class NeuralNetwork implements NetworkConstants {
         return new ForwardPropOutput(passed, matrix);
     }
 
+    //executes forward propagation starting from the specified layer
     public ForwardPropOutput forwardProp(Vector input, int startLayer) {
         Vector[] matrix = new Vector[network.size() - startLayer];
         Vector passed = network.get(startLayer).activations(input);
@@ -75,13 +94,13 @@ public class NeuralNetwork implements NetworkConstants {
         return new ForwardPropOutput(passed, matrix);
     }
 
-    //An implementation of gradient checking
+    //implemented to validate the gradient calculated through backpropagation
     public double getApproximateLossDerivative(int layer, int neuron, int weight, Vector networkInput, Vector actual, double h) {
 
         ForwardPropOutput output = forwardProp(networkInput);
         Vector[] activations = output.getIntermediaryMatrix();
 
-        ForwardPropOutput relativeOutput = null;
+        ForwardPropOutput relativeOutput;
         if (layer == 0) {
             relativeOutput = forwardProp(networkInput, layer);
         } else {
@@ -109,33 +128,22 @@ public class NeuralNetwork implements NetworkConstants {
     //training when recalculating loss is not feasible
     public void train(ArrayList<NetworkData> trainingData) {
         double momentum = 1;
-        int epoch = 0;
-        double lossf = 0;
-        double lossi = 1;
-//        while (momentum > minMomentum && lossi - lossf > lossSeparator) {
+        double epoch = 0;
+        double lossf;
         while (momentum > minMomentum) {
 
-//            System.out.println(trainingData.get(0).getInput());
-//            if (true) continue;
-
-//            lossi = cumulativeLoss(trainingData, this);
             NetworkGradient cumulativeLossGradient = new NetworkGradient();
             for (NetworkData data : trainingData) {
                 cumulativeLossGradient.add(getGradient(data.getInput(), data.getOutput()));
             }
+
             NetworkGradient updateGradient = getUpdateVector(cumulativeLossGradient, momentum);
             updateWeightsAndBiases(updateGradient);
+
             double gradientMagnitude = getGradientMagnitude(cumulativeLossGradient);
-            momentum = 2 * maxMomentum * (Perceptron.sigmoid(gradientMagnitude) - 0.5);
-//            if (momentum < minMomentum && epoch < 10) {
-//                reinitializeWeightsAndBiases(10);
-//                epoch = 0;
-//                momentum = 1;
-//                lossf = 0;
-//                lossi = 1;
-//                continue;
-//            }
+            momentum = 2 * maxMomentum * (Sigmoid.sigmoid(gradientMagnitude) - 0.5);
             lossf = cumulativeLoss(trainingData, this);
+
             epoch++;
             System.out.println("--------");
             System.out.println("loss: " + lossf);
@@ -146,6 +154,7 @@ public class NeuralNetwork implements NetworkConstants {
         }
     }
 
+    //given a gradient, calculates the magnitude of that gradient
     public double getGradientMagnitude(NetworkGradient networkOutput) {
         double magnitude = 0;
         for (ArrayList<Vector> layer : networkOutput.getdLossdWeights()) {
@@ -163,6 +172,7 @@ public class NeuralNetwork implements NetworkConstants {
         return Math.sqrt(magnitude);
     }
 
+    //given an update vector, updates this network accordingly
     public void updateWeightsAndBiases(NetworkGradient updateVector) {
         for (int layer = 0; layer < network.size(); layer++) {
             for (int neuron = 0; neuron < network.get(layer).length(); neuron++) {
@@ -177,6 +187,7 @@ public class NeuralNetwork implements NetworkConstants {
         }
     }
 
+    //converts a loss vector to an update vector which can be directly applied to the network's weights and bias vector
     public NetworkGradient getUpdateVector(NetworkGradient gradient, double momentum) {
 
         ArrayList<ArrayList<Vector>> dLossdWeights = gradient.getdLossdWeights();
@@ -216,6 +227,7 @@ public class NeuralNetwork implements NetworkConstants {
         return new NetworkGradient(weightUpdates, biasUpdates);
     }
 
+    //for the specified input-output pair, calculates the derivative of loss with respect to each weight and bias
     public NetworkGradient getGradient(Vector input, Vector correct) {
 
         //all information needed to calculate necessary partial derivatives
@@ -248,8 +260,7 @@ public class NeuralNetwork implements NetworkConstants {
         return new NetworkGradient(dLossdWeights, dLossdBiases);
     }
 
-    //Finds the derivative of each neuron's activation with respect to every weight within the neuron.
-    //Written for implementation in some form of the chain rule.
+    //finds the derivative of each neuron's activation with respect to every weight within the neuron.
     public ArrayList<ArrayList<Vector>> getWeightDerivatives(Vector[] neuronActivations, Vector input) {
         ArrayList<ArrayList<Vector>> weightDerivatives = new ArrayList<>();
         for (int layer = network.size() - 1; layer >= 0; layer--) {
@@ -265,7 +276,7 @@ public class NeuralNetwork implements NetworkConstants {
 
                     for (int weight = 0; weight < input.length(); weight++) {
                         double factor = input.get(weight);
-                        pDerivatives.set(weight, Perceptron.sigmoidDerivative(guess) * factor);
+                        pDerivatives.set(weight, network.get(layer).get(neuron).getActivator().activationDerivative(guess) * factor);
                     }
 
                 } else {
@@ -275,7 +286,7 @@ public class NeuralNetwork implements NetworkConstants {
 
                     for (int weight = 0; weight < network.get(layer - 1).length(); weight++) {
                         double factor = neuronActivations[layer - 1].get(weight);
-                        pDerivatives.set(weight, Perceptron.sigmoidDerivative(guess) * factor);
+                        pDerivatives.set(weight, network.get(layer).get(neuron).getActivator().activationDerivative(guess) * factor);
                     }
                 }
                 thisLayer.add(pDerivatives);
@@ -298,7 +309,7 @@ public class NeuralNetwork implements NetworkConstants {
                 double guess = network.get(layer).get(neuron).unactivatedGuess(neuronActivations[layer - 1]);
                 for (int weight = 0; weight < network.get(layer - 1).length(); weight++) {
                     double factor = network.get(layer).get(neuron).getWeights().get(weight);
-                    pDerivatives.set(weight, Perceptron.sigmoidDerivative(guess) * factor);
+                    pDerivatives.set(weight, network.get(layer).get(neuron).getActivator().activationDerivative(guess) * factor);
                 }
                 thisLayer.add(pDerivatives);
             }
@@ -320,9 +331,9 @@ public class NeuralNetwork implements NetworkConstants {
             for (int neuron = 0; neuron < network.get(layer).length(); neuron++) {
                 double bderivative;
                 if (layer == 0) {
-                    bderivative = Perceptron.sigmoidDerivative(network.get(layer).get(neuron).unactivatedGuess(input));
+                    bderivative = network.get(layer).get(neuron).getActivator().activationDerivative(network.get(layer).get(neuron).unactivatedGuess(input));
                 } else {
-                    bderivative = Perceptron.sigmoidDerivative(network.get(layer).get(neuron).unactivatedGuess(neuronActivations[layer - 1]));
+                    bderivative = network.get(layer).get(neuron).getActivator().activationDerivative(network.get(layer).get(neuron).unactivatedGuess(neuronActivations[layer - 1]));
                 }
                 thisLayer.add(bderivative);
             }
@@ -331,6 +342,7 @@ public class NeuralNetwork implements NetworkConstants {
         return biasDerivatives;
     }
 
+    //derivative of loss with respect to each each activation in the last layer
     public Vector getLossDWRTLastLayer(Vector actual, Vector prediction) { //derivatives calculated for MSE
         Vector out = new Vector(actual.length());
         for (int i = 0; i < out.length(); i++) {
@@ -339,7 +351,7 @@ public class NeuralNetwork implements NetworkConstants {
         return out;
     }
 
-    //returns a matrix of doubles representing the derivative of the loss function with respect to each activation at the current network configuration
+    //returns a matrix representing the derivative of loss with respect to each activation at the current network configuration
     public Vector[] getLossDWRTactivations(Vector lastLayerDerivatives, ArrayList<ArrayList<Vector>> layerDerivatives) {
         Vector[] activationDerivatives = new Vector[network.size()];
         activationDerivatives[network.size() - 1] = lastLayerDerivatives.copy();
@@ -358,6 +370,7 @@ public class NeuralNetwork implements NetworkConstants {
         return activationDerivatives;
     }
 
+    //finds the derivatives of loss with respect to each weight
     public ArrayList<ArrayList<Vector>> getWeightDWRTLoss(Vector[] activationDWRTLoss, ArrayList<ArrayList<Vector>> weightDWRTactivations) {
         ArrayList<ArrayList<Vector>> weightDWRTLoss = new ArrayList<>();
         for (int layer = 0; layer < network.size(); layer++) {
@@ -382,6 +395,7 @@ public class NeuralNetwork implements NetworkConstants {
         return weightDWRTLoss;
     }
 
+    //finds the derivative of loss with respect to each bias
     public ArrayList<ArrayList<Double>> getBiasDWRTLoss(Vector[] activationDWRTLoss, ArrayList<ArrayList<Double>> biasDWRTactivations) {
         ArrayList<ArrayList<Double>> biasDWRTLoss = new ArrayList<>();
         for (int layer = 0; layer < network.size(); layer++) {
@@ -394,6 +408,7 @@ public class NeuralNetwork implements NetworkConstants {
         return biasDWRTLoss;
     }
 
+    //computes the total loss given the training set being used
     public static double cumulativeLoss(ArrayList<NetworkData> testSet, NeuralNetwork neuralNetwork) {
         double out = 0;
         for (NetworkData data : testSet) {
@@ -402,6 +417,7 @@ public class NeuralNetwork implements NetworkConstants {
         return out;
     }
 
+    //computes the loss given a specific input-output pairing
     public static double computeLoss(Vector predicted, Vector actual) {
         double sum = 0;
         assert predicted.length() == actual.length();
@@ -411,6 +427,7 @@ public class NeuralNetwork implements NetworkConstants {
         return sum * 0.5;
     }
 
+    //visualizer for the network
     public void displayWeightsAndBiases() {
         for (int i = 0; i < 5; i++) System.out.println();
         System.out.println("DISPLAYING WEIGHTS");
@@ -426,28 +443,7 @@ public class NeuralNetwork implements NetworkConstants {
         }
     }
 
-    public void display() {
-        for (int i = 0; i < inputSize; i++) {
-            System.out.print("x" + i + "    ");
-        }
-        System.out.println();
-        for (int i = 0; i < network.size(); i++) {
-            System.out.println(network.get(i));
-        }
-    }
-
-    public Perceptron getPerceptron(int layer, int perceptron) {
-        return network.get(layer).get(perceptron);
-    }
-
-    public Layer getLayer(int i) {
-        return network.get(i);
-    }
-
-    public int numLayers() {
-        return network.size();
-    }
-
+    //NetworkGradients represent loss vectors which describe both the weights and biases of a network
     public static class NetworkGradient {
 
         private ArrayList<ArrayList<Vector>> dLossdWeights;
