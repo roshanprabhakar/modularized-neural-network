@@ -25,4 +25,8 @@ public class NetworkData {
     public void setOutput(Vector output) {
         this.output = output;
     }
+
+    public static double round(double n, int place) {
+        return (int) (n * place) / (double) place;
+    }
 }

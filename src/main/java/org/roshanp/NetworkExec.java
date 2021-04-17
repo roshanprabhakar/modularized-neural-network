@@ -1,6 +1,7 @@
 package org.roshanp;
 
 
+import org.roshanp.NeuralNetwork.Activations.Sigmoid;
 import org.roshanp.NeuralNetwork.NetworkData;
 import org.roshanp.NeuralNetwork.NeuralNetwork;
 import org.roshanp.NeuralNetwork.Vector;
@@ -11,7 +12,7 @@ public class NetworkExec {
 
     public static void main(String[] args) {
 
-        NeuralNetwork network = new NeuralNetwork(new int[]{2, 2, 1}, 3, 0.001, 1, 0.001);
+        NeuralNetwork network = new NeuralNetwork(new int[]{2, 2, 1}, 3, 0.001, 1, 0.001, NeuralNetwork.sigmoid);
 
         ArrayList<NetworkData> trainingData = new ArrayList<>() {
             {

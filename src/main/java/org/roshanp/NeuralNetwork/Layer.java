@@ -1,15 +1,16 @@
 package org.roshanp.NeuralNetwork;
 
+import org.roshanp.NeuralNetwork.Activations.Activator;
 import org.roshanp.NeuralNetwork.Activations.Sigmoid;
 
 public class Layer implements NetworkConstants {
 
     private Perceptron[] neurons;
 
-    public Layer(int numberOfPerceptrons, int dataLength) {
+    public Layer(int numberOfPerceptrons, int dataLength, Activator activator) {
         neurons = new Perceptron[numberOfPerceptrons];
         for (int i = 0; i < neurons.length; i++) {
-            neurons[i] = new Perceptron(new Sigmoid(), dataLength, true);
+            neurons[i] = new Perceptron(activator, dataLength, true);
         }
     }
 
@@ -32,7 +33,7 @@ public class Layer implements NetworkConstants {
     public String toString() {
         StringBuilder out = new StringBuilder();
         for (int i = 0; i < neurons.length; i++) {
-            out.append("[").append(neurons[i].getWeights()).append("]{").append(Data.round(neurons[i].getBias(), 100)).append("}").append("   ");
+            out.append("[").append(neurons[i].getWeights()).append("]{").append(NetworkData.round(neurons[i].getBias(), 100)).append("}").append("   ");
         }
         return out.toString();
     }

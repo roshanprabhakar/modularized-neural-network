@@ -40,9 +40,6 @@ public class Perceptron {
         return bias;
     }
 
-    public void shiftWeight(int weight, double shift) {
-        weights.set(weight, weights.get(weight) + shift);
-    }
     public void updateWeight(int weight, double newWeight) {
         weights.set(weight, newWeight);
     }

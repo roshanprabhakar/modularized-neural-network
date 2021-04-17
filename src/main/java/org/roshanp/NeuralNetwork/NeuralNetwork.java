@@ -1,10 +1,13 @@
 package org.roshanp.NeuralNetwork;
 
+import org.roshanp.NeuralNetwork.Activations.Activator;
 import org.roshanp.NeuralNetwork.Activations.Sigmoid;
 
 import java.util.ArrayList;
 
 public class NeuralNetwork {
+
+    public static final Activator sigmoid = new Sigmoid();
 
     //primary network object
     private ArrayList<Layer> network;
@@ -26,11 +29,11 @@ public class NeuralNetwork {
      * @param maxMomentum max bounds for accelerating gradient updates
      * @param minMomentum min bounds for decelerating gradient updates
      */
-    public NeuralNetwork(int[] layers, int inputSize, double learningRate, double maxMomentum, double minMomentum) {
+    public NeuralNetwork(int[] layers, int inputSize, double learningRate, double maxMomentum, double minMomentum, Activator activator) {
         network = new ArrayList<>();
-        network.add(new Layer(layers[0], inputSize));
+        network.add(new Layer(layers[0], inputSize, activator));
         for (int layer = 1; layer < layers.length; layer++) {
-            network.add(new Layer(layers[layer], layers[layer - 1]));
+            network.add(new Layer(layers[layer], layers[layer - 1], activator));
         }
         this.inputSize = inputSize;
         this.learningRate = learningRate;
@@ -46,11 +49,11 @@ public class NeuralNetwork {
      * @param maxMomentum max bounds for accelerating gradient updates
      * @param minMomentum min bounds for decelerating gradient updates
      */
-    public NeuralNetwork(int inputSize, int neuronsPerHidden, int numHiddenLayers, double learningRate, double maxMomentum, double minMomentum) {
+    public NeuralNetwork(int inputSize, int neuronsPerHidden, int numHiddenLayers, double learningRate, double maxMomentum, double minMomentum, Activator activator) {
         network = new ArrayList<>();
-        network.add(new Layer(neuronsPerHidden, inputSize));
+        network.add(new Layer(neuronsPerHidden, inputSize, activator));
         for (int i = 0; i < numHiddenLayers - 1; i++) {
-            network.add(new Layer(neuronsPerHidden, neuronsPerHidden));
+            network.add(new Layer(neuronsPerHidden, neuronsPerHidden, activator));
         }
         this.inputSize = inputSize;
         this.learningRate = learningRate;
@@ -63,7 +66,7 @@ public class NeuralNetwork {
         for (int layer = 0; layer < network.size(); layer++) {
             for (int neuron = 0; neuron < network.get(layer).length(); neuron++) {
                 for (int weight = 0; weight < network.get(layer).get(neuron).getWeights().length(); weight++) {
-                    network.get(layer).get(neuron).getWeights().set(weight, Math.random() * scope * Math.pow(-1, (int)((Math.random())*10)));
+                    network.get(layer).get(neuron).updateWeight(weight, Math.random() * scope * Math.pow(-1, (int)((Math.random())*10)));
                 }
                 network.get(layer).get(neuron).updateBias(Math.random() * scope * Math.pow(-1, (int)((Math.random())*10)));
             }
@@ -479,4 +482,24 @@ public class NeuralNetwork {
             return dLossdBiases;
         }
     }
+
+    public static class ForwardPropOutput {
+
+        private final Vector resultant;
+        private final Vector[] intermediaryMatrix;
+
+        public ForwardPropOutput(Vector resultant, Vector[] intermediaryMatrix) {
+            this.resultant = resultant;
+            this.intermediaryMatrix = intermediaryMatrix;
+        }
+
+        public Vector getResultant() {
+            return resultant;
+        }
+
+        public Vector[] getIntermediaryMatrix() {
+            return intermediaryMatrix;
+        }
+    }
+
 }

@@ -127,7 +127,7 @@ public class Vector {
     public String toString() {
         StringBuilder out = new StringBuilder("(");
         for (int i = 0; i < vector.length; i++) {
-            out.append(Data.round(vector[i], 1000));
+            out.append(NetworkData.round(vector[i], 1000));
 //            out.append(vector[i]);
             if (i != vector.length - 1) out.append(", ");
         }
