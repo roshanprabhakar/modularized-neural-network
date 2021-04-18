@@ -1,10 +1,19 @@
 package org.roshanp.NeuralNetwork;
 
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.ChartPanel;
+import org.jfree.chart.JFreeChart;
+import org.jfree.data.xy.XYDataset;
+import org.jfree.data.xy.XYSeries;
+import org.jfree.data.xy.XYSeriesCollection;
 import org.roshanp.NeuralNetwork.Activations.Activator;
 import org.roshanp.NeuralNetwork.Activations.Sigmoid;
 
+import javax.swing.*;
 import java.util.ArrayList;
 
+//IMPORTANT
+//all data must be bounded in input and output by the scope of the activation function (layers 0 and n are activated by the specified activation, therefore bounded)
 public class NeuralNetwork {
 
     public static final Activator sigmoid = new Sigmoid();
@@ -23,7 +32,7 @@ public class NeuralNetwork {
     private double minMomentum;
 
     /**
-     * @param layers layers[i] corresponds to the number of neurons at layer i in the network,
+     * @param layers layers[i] corresponds to the number of neurons at layer i in the network, where i is the layer index AFTER input
      * @param inputSize input dimension
      * @param learningRate one of the factors for each component of the gradient
      * @param maxMomentum max bounds for accelerating gradient updates
@@ -129,7 +138,30 @@ public class NeuralNetwork {
     }
 
     //training when recalculating loss is not feasible
-    public void train(ArrayList<NetworkData> trainingData) {
+    public void train(ArrayList<NetworkData> trainingData, boolean visualize) {
+
+        JFrame frame = null;
+        JFreeChart chart = null;
+        XYSeriesCollection dataset = null;
+        XYSeries loss = null;
+        XYSeries momentumTable = null;
+        XYSeries gradientM = null;
+
+        if (visualize) {
+            frame = new JFrame("Performance");
+            dataset = new XYSeriesCollection();
+            loss = new XYSeries("loss");
+            momentumTable = new XYSeries("momentum");
+            gradientM = new XYSeries("gradient");
+            dataset.addSeries(loss);
+            dataset.addSeries(momentumTable);
+            dataset.addSeries(gradientM);
+            chart = ChartFactory.createXYLineChart("Performance", "Epoch", "Y", dataset);
+            frame.setContentPane(new ChartPanel(chart));
+            frame.pack();
+            frame.setVisible(true);
+        }
+
         double momentum = 1;
         double epoch = 0;
         double lossf;
@@ -148,12 +180,18 @@ public class NeuralNetwork {
             lossf = cumulativeLoss(trainingData, this);
 
             epoch++;
-            System.out.println("--------");
-            System.out.println("loss: " + lossf);
-            System.out.println("|gradient|: " + gradientMagnitude);
-            System.out.println("momentum: " + momentum);
-            System.out.println("--------");
-            System.out.println();
+//            System.out.println("--------");
+//            System.out.println("loss: " + lossf);
+//            System.out.println("|gradient|: " + gradientMagnitude);
+//            System.out.println("momentum: " + momentum);
+//            System.out.println("--------");
+//            System.out.println();
+
+            if (visualize) {
+                loss.add(epoch, lossf);
+                momentumTable.add(epoch, momentum);
+                gradientM.add(epoch, gradientMagnitude);
+            }
         }
     }
 
