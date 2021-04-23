@@ -26,6 +26,10 @@ public class Layer implements NetworkConstants {
         return activations;
     }
 
+    public int getInputLength(int neuron) {
+        return neurons[neuron].getWeights().length();
+    }
+
     public int length() {
         return neurons.length;
     }
