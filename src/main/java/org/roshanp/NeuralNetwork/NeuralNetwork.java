@@ -138,6 +138,8 @@ public class NeuralNetwork {
     }
 
     //training when recalculating loss is not feasible
+    //TODO update to depend on gradient of respective dimension
+    //TODO momentum to depend on concavity of respective dimension
     public void train(ArrayList<NetworkData> trainingData, boolean visualize) {
 
         JFrame frame = null;
@@ -162,7 +164,7 @@ public class NeuralNetwork {
             frame.setVisible(true);
         }
 
-        double momentum = 1;
+        double momentum = maxMomentum;
         double epoch = 0;
         double lossf;
         while (momentum > minMomentum) {
@@ -172,7 +174,7 @@ public class NeuralNetwork {
                 cumulativeLossGradient.add(getGradient(data.getInput(), data.getOutput()));
             }
 
-            NetworkGradient updateGradient = getUpdateVector(cumulativeLossGradient, momentum);
+            NetworkGradient updateGradient = getUpdateVector(cumulativeLossGradient);
             updateWeightsAndBiases(updateGradient);
 
             double gradientMagnitude = getGradientMagnitude(cumulativeLossGradient);
@@ -229,7 +231,7 @@ public class NeuralNetwork {
     }
 
     //converts a loss vector to an update vector which can be directly applied to the network's weights and bias vector
-    public NetworkGradient getUpdateVector(NetworkGradient gradient, double momentum) {
+    public NetworkGradient getUpdateVector(NetworkGradient gradient) {
 
         ArrayList<ArrayList<Vector>> dLossdWeights = gradient.getdLossdWeights();
         ArrayList<ArrayList<Double>> dLossdBiases = gradient.getdLossdBiases();
@@ -244,23 +246,25 @@ public class NeuralNetwork {
 
                 Vector updates = new Vector(dLossdWeights.get(layer).get(neuron).length());
                 for (int weight = 0; weight < updates.length(); weight++) {
-                    if (dLossdWeights.get(layer).get(neuron).get(weight) < 0) {
-                        updates.set(weight, learningRate * momentum);
-                    } else if (dLossdWeights.get(layer).get(neuron).get(weight) > 0) {
-                        updates.set(weight, -learningRate * momentum);
-                    } else {
-                        updates.set(weight, Math.pow(-1, (int) (Math.random() * 10)) * learningRate * momentum);
-                    }
+//                    if (dLossdWeights.get(layer).get(neuron).get(weight) < 0) {
+//                        updates.set(weight, learningRate * momentum);
+//                    } else if (dLossdWeights.get(layer).get(neuron).get(weight) > 0) {
+//                        updates.set(weight, -learningRate * momentum);
+//                    } else {
+//                        updates.set(weight, Math.pow(-1, (int) (Math.random() * 10)) * learningRate * momentum);
+//                    }
+                    updates.set(weight, -1 * learningRate * dLossdWeights.get(layer).get(neuron).get(weight));
                 }
                 thisLayerW.add(updates);
 
-                if (dLossdBiases.get(layer).get(neuron) < 0) {
-                    thisLayerB.add(learningRate * momentum);
-                } else if (dLossdBiases.get(layer).get(neuron) > 0) {
-                    thisLayerB.add(-learningRate * momentum);
-                } else {
-                    thisLayerB.add(Math.pow(-1, (int) (Math.random() * 10)) * learningRate * momentum);
-                }
+//                if (dLossdBiases.get(layer).get(neuron) < 0) {
+//                    thisLayerB.add(learningRate * momentum);
+//                } else if (dLossdBiases.get(layer).get(neuron) > 0) {
+//                    thisLayerB.add(-learningRate * momentum);
+//                } else {
+//                    thisLayerB.add(Math.pow(-1, (int) (Math.random() * 10)) * learningRate * momentum);
+//                }
+                thisLayerB.add(-1 * learningRate * dLossdBiases.get(layer).get(neuron));
             }
             weightUpdates.add(thisLayerW);
             biasUpdates.add(thisLayerB);
