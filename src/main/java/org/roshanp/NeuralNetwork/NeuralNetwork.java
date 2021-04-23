@@ -182,12 +182,6 @@ public class NeuralNetwork {
             lossf = cumulativeLoss(trainingData, this);
 
             epoch++;
-//            System.out.println("--------");
-//            System.out.println("loss: " + lossf);
-//            System.out.println("|gradient|: " + gradientMagnitude);
-//            System.out.println("momentum: " + momentum);
-//            System.out.println("--------");
-//            System.out.println();
 
             if (visualize) {
                 loss.add(epoch, lossf);
