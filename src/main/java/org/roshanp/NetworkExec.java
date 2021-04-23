@@ -17,8 +17,9 @@ public class NetworkExec {
         double trainingPercentage = 0.7;
 
         ArrayList<NetworkData> data = IrisData.loadIrisData("./src/main/java/org/roshanp/Data/IrisData.csv");
+        NetworkData.normalize(data);
         Collections.shuffle(data);
-
+        
 //        ArrayList<NetworkData> trainingData = new ArrayList<>();
 //        for (int i = 0; i < data.size() * trainingPercentage; i++) {
 //            trainingData.add(data.get(i));

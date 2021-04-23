@@ -34,8 +34,10 @@ public class Vector {
 
 
     public Vector multiplyScalar(double scalar) {
-        Vector copy = this.copy();
-        return multiplyScalar(scalar, copy);
+        for (int i = 0; i < vector.length; i++) {
+            vector[i] *= scalar;
+        }
+        return this;
     }
 
     public static Vector multiplyScalar(double scalar, Vector v) {
@@ -51,12 +53,6 @@ public class Vector {
             vector[i] += other.get(i);
         }
         return this;
-    }
-
-    public void concat(Vector other) {
-        for (int i = 0; i < vector.length; i++) {
-            vector[i] += other.get(i);
-        }
     }
 
     public static Vector add(Vector v, Vector p) {
@@ -103,6 +99,20 @@ public class Vector {
         return out;
     }
 
+    public Vector raise(double p) {
+        for (int i = 0; i < vector.length; i++) {
+            vector[i] = Math.pow(vector[i], p);
+        }
+        return this;
+    }
+
+    public Vector square() {
+        for (int i = 0; i < vector.length; i++) {
+            vector[i] = vector[i] * vector[i];
+        }
+        return this;
+    }
+
     public double loss(Vector correct) {
         if (correct.length() != this.length()) return Double.MAX_VALUE;
         double loss = 0;
@@ -119,10 +129,6 @@ public class Vector {
     public double[] getVector() {
         return vector;
     }
-
-//    public String toString() {
-//        return Arrays.toString(vector);
-//    }
 
     public String toString() {
         StringBuilder out = new StringBuilder("(");
