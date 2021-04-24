@@ -12,11 +12,11 @@ import java.util.HashMap;
 
 public class IrisData extends NetworkData {
 
-    private static final HashMap<String, Double> map = new HashMap<>() {
+    private static final HashMap<String, Vector> map = new HashMap<>() {
         {
-            put("Iris-setosa", 0.0);
-            put("Iris-versicolor", 0.5);
-            put("Iris-virginica", 1.0);
+            put("Iris-setosa", new Vector(new double[]{1, 0, 0}));
+            put("Iris-versicolor", new Vector(new double[]{0, 1, 0}));
+            put("Iris-virginica", new Vector(new double[]{0, 0, 1}));
         }
     };
 
@@ -49,9 +49,7 @@ public class IrisData extends NetworkData {
     }
 
     private static Vector getOut(String l) {
-        Vector out = new Vector(1);
-        out.set(0, map.get(l.split(",")[4]));
-        return out;
+        return map.get(l.split(",")[4]);
     }
 
 }

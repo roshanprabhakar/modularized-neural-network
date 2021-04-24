@@ -4,6 +4,7 @@ package org.roshanp;
 import org.roshanp.Data.IrisData;
 import org.roshanp.NeuralNetwork.Activations.Sigmoid;
 import org.roshanp.NeuralNetwork.NetworkData;
+import org.roshanp.NeuralNetwork.NetworkVisualizer;
 import org.roshanp.NeuralNetwork.NeuralNetwork;
 import org.roshanp.NeuralNetwork.Vector;
 
@@ -12,9 +13,7 @@ import java.util.Collections;
 
 public class NetworkExec {
 
-    public static void main(String[] args) {
-
-        double trainingPercentage = 0.7;
+    public static void main(String[] args) throws InterruptedException {
 
         ArrayList<NetworkData> data = IrisData.loadIrisData("./src/main/java/org/roshanp/Data/IrisData.csv");
         NetworkData.normalize(data);
@@ -30,7 +29,7 @@ public class NetworkExec {
 //            testData.add(data.get(i));
 //        }
 
-        NeuralNetwork network = new NeuralNetwork(new int[]{16, 12, 1}, 4, 0.0001, 10, 0.001, NeuralNetwork.sigmoid);
+        NeuralNetwork network = new NeuralNetwork(new int[]{4,3}, 4, 0.01, 10, 0.001, NeuralNetwork.sigmoid);
         network.train(data, true);
 
         for (int i = 0; i < data.size(); i++) {
