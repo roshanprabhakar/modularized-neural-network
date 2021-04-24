@@ -160,7 +160,7 @@ public class NeuralNetwork {
             momentumTable = new XYSeries("momentum");
             gradientM = new XYSeries("gradient");
             dataset.addSeries(loss);
-            dataset.addSeries(momentumTable);
+//            dataset.addSeries(momentumTable);
             dataset.addSeries(gradientM);
             chart = ChartFactory.createXYLineChart("Performance", "Epoch", "Y", dataset);
             frame.setContentPane(new ChartPanel(chart));
