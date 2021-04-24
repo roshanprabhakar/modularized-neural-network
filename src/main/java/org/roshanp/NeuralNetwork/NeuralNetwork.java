@@ -150,8 +150,11 @@ public class NeuralNetwork {
         XYSeries momentumTable = null;
         XYSeries gradientM = null;
 
-        NetworkVisualizer visualizer = new NetworkVisualizer(this);
-        visualizer.setVisible(true);
+//        NetworkVisualizer networkVisualizer = new NetworkVisualizer(this);
+//        networkVisualizer.setVisible(true);
+//
+        DataVisualizer dataVisualizer = new DataVisualizer(trainingData, this);
+        dataVisualizer.setVisible(true);
 
         if (visualize) {
             frame = new JFrame("Performance");
@@ -193,12 +196,15 @@ public class NeuralNetwork {
                 gradientM.add(epoch, gradientMagnitude);
             }
 
-            //manage weights visualizer
-            for (int layer = 0; layer < network.size(); layer++) {
-                for (int neuron = 0; neuron < network.get(layer).length(); neuron++) {
-                    visualizer.set(neuron, layer, network.get(layer).get(neuron).getWeights().toString());
-                }
-            }
+//            //manage weights visualizer
+//            for (int layer = 0; layer < network.size(); layer++) {
+//                for (int neuron = 0; neuron < network.get(layer).length(); neuron++) {
+//                    networkVisualizer.set(neuron, layer, network.get(layer).get(neuron).getWeights().toString());
+//                }
+//            }
+
+            //manage data visualizer
+            dataVisualizer.reload();
         }
     }
 
