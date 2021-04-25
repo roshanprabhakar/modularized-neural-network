@@ -140,7 +140,7 @@ public class NeuralNetwork {
     //training when recalculating loss is not feasible
     //TODO update to depend on gradient of respective dimension
     //TODO momentum to depend on concavity of respective dimension
-    //TODO add weights visualizer
+    //TODO pause/resume training functionality (multi-threaded run + observing controllers)
     public void train(ArrayList<NetworkData> trainingData, boolean visualize) {
 
         JFrame frame = null;
@@ -150,11 +150,11 @@ public class NeuralNetwork {
         XYSeries momentumTable = null;
         XYSeries gradientM = null;
 
-//        NetworkVisualizer networkVisualizer = new NetworkVisualizer(this);
-//        networkVisualizer.setVisible(true);
+        NetworkVisualizer networkVisualizer = new NetworkVisualizer(this);
+        networkVisualizer.setVisible(true);
 //
-        DataVisualizer dataVisualizer = new DataVisualizer(trainingData, this);
-        dataVisualizer.setVisible(true);
+//        DataVisualizer dataVisualizer = new DataVisualizer(trainingData, this);
+//        dataVisualizer.setVisible(true);
 
         if (visualize) {
             frame = new JFrame("Performance");
@@ -196,15 +196,15 @@ public class NeuralNetwork {
                 gradientM.add(epoch, gradientMagnitude);
             }
 
-//            //manage weights visualizer
-//            for (int layer = 0; layer < network.size(); layer++) {
-//                for (int neuron = 0; neuron < network.get(layer).length(); neuron++) {
-//                    networkVisualizer.set(neuron, layer, network.get(layer).get(neuron).getWeights().toString());
-//                }
-//            }
+            //manage weights visualizer
+            for (int layer = 0; layer < network.size(); layer++) {
+                for (int neuron = 0; neuron < network.get(layer).length(); neuron++) {
+                    networkVisualizer.set(neuron, layer, network.get(layer).get(neuron).getWeights().toString());
+                }
+            }
 
-            //manage data visualizer
-            dataVisualizer.reload();
+//            //manage data visualizer
+//            dataVisualizer.reload();
         }
     }
 
