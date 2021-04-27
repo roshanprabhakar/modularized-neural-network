@@ -141,40 +141,28 @@ public class NeuralNetwork {
     //TODO update to depend on gradient of respective dimension
     //TODO momentum to depend on concavity of respective dimension
     //TODO pause/resume training functionality (multi-threaded run + observing controllers)
-    public void train(ArrayList<NetworkData> trainingData, boolean visualize) {
+    public void train(ArrayList<NetworkData> trainingData, boolean verbose) {
 
-        JFrame frame = null;
-        JFreeChart chart = null;
-        XYSeriesCollection dataset = null;
-        XYSeries loss = null;
-        XYSeries momentumTable = null;
-        XYSeries gradientM = null;
+//        NetworkVisualizer networkVis = null;
+//        DataVisualizer dataVis = null;
+        PerformanceVisualizer performanceVis = null;
 
-        NetworkVisualizer networkVisualizer = new NetworkVisualizer(this);
-        networkVisualizer.setVisible(true);
-//
-//        DataVisualizer dataVisualizer = new DataVisualizer(trainingData, this);
-//        dataVisualizer.setVisible(true);
+        if (verbose) {
+//            networkVis = new NetworkVisualizer(this);
+//            networkVis.setVisible(true);
 
-        if (visualize) {
-            frame = new JFrame("Performance");
-            dataset = new XYSeriesCollection();
-            loss = new XYSeries("loss");
-            momentumTable = new XYSeries("momentum");
-            gradientM = new XYSeries("gradient");
-            dataset.addSeries(loss);
-//            dataset.addSeries(momentumTable);
-            dataset.addSeries(gradientM);
-            chart = ChartFactory.createXYLineChart("Performance", "Epoch", "Y", dataset);
-            frame.setContentPane(new ChartPanel(chart));
-            frame.pack();
-            frame.setVisible(true);
+//            dataVis = new DataVisualizer(trainingData, this);
+//            dataVis.setVisible(true);
+
+            performanceVis = new PerformanceVisualizer(this);
+            performanceVis.setVisible(true);
         }
 
-        double momentum = maxMomentum;
         double epoch = 0;
         double lossf;
-        while (momentum > minMomentum) {
+        double accuracy;
+
+        while (true) {
 
             NetworkGradient cumulativeLossGradient = new NetworkGradient();
             for (NetworkData data : trainingData) {
@@ -185,26 +173,16 @@ public class NeuralNetwork {
             updateWeightsAndBiases(updateGradient);
 
             double gradientMagnitude = getGradientMagnitude(cumulativeLossGradient);
-            momentum = 2 * maxMomentum * (Sigmoid.sigmoid(gradientMagnitude) - 0.5);
             lossf = cumulativeLoss(trainingData, this);
 
             epoch++;
+            accuracy = getAccuracy(trainingData, this);
 
-            if (visualize) {
-                loss.add(epoch, lossf);
-                momentumTable.add(epoch, momentum);
-                gradientM.add(epoch, gradientMagnitude);
+            if (verbose) {
+//                networkVis.update();
+//                dataVis.reload();
+                performanceVis.update(lossf, gradientMagnitude, accuracy);
             }
-
-            //manage weights visualizer
-            for (int layer = 0; layer < network.size(); layer++) {
-                for (int neuron = 0; neuron < network.get(layer).length(); neuron++) {
-                    networkVisualizer.set(neuron, layer, network.get(layer).get(neuron).getWeights().toString());
-                }
-            }
-
-//            //manage data visualizer
-//            dataVisualizer.reload();
         }
     }
 
@@ -571,4 +549,12 @@ public class NeuralNetwork {
         }
     }
 
+    public static double getAccuracy(ArrayList<NetworkData> trainingSet, NeuralNetwork network) {
+        double correct = 0;
+        for (NetworkData data : trainingSet) {
+            Vector resultant = network.forwardProp(data.getInput()).getResultant();
+            if (data.stepwise(resultant).equals(data.getOutput())) correct++;
+        }
+        return correct / trainingSet.size() * 100;
+    }
 }

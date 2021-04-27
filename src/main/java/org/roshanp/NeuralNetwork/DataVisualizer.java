@@ -14,7 +14,7 @@ public class DataVisualizer extends JFrame {
     private ArrayList<NetworkData> data;
     private NeuralNetwork network;
 
-    JTextField[][] REF;
+    private JTextField[][] REF;
 
     public DataVisualizer(ArrayList<NetworkData> data, NeuralNetwork network) {
         super("data visualizer");
