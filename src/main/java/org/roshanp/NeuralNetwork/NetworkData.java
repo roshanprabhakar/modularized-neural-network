@@ -2,7 +2,7 @@ package org.roshanp.NeuralNetwork;
 
 import java.util.ArrayList;
 
-public class NetworkData {
+public abstract class NetworkData {
 
     private Vector input;
     private Vector output;
@@ -61,4 +61,6 @@ public class NetworkData {
         }
         return sd.multiplyScalar(1.0 / data.size()).raise(0.5);
     }
+
+    public abstract Vector stepwise(Vector resultant);
 }

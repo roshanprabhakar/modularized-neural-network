@@ -11,6 +11,8 @@ public class NetworkVisualizer extends JFrame {
 
     private JTextField[][] REF;
 
+    private NeuralNetwork network;
+
     public NetworkVisualizer(NeuralNetwork network) {
         super("network visualizer");
 
@@ -30,6 +32,8 @@ public class NetworkVisualizer extends JFrame {
             }
         }
 
+        this.network = network;
+
         this.getContentPane().add(panel, BorderLayout.CENTER);
         this.pack();
     }
@@ -38,5 +42,11 @@ public class NetworkVisualizer extends JFrame {
         REF[r][c].setText(text);
     }
 
-
+    public void update() {
+        for (int layer = 0; layer < network.numLayers(); layer++) {
+            for (int neuron = 0; neuron < network.getLayer(layer).length(); neuron++) {
+                set(neuron, layer, network.getLayer(layer).get(neuron).getWeights().toString());
+            }
+        }
+    }
 }

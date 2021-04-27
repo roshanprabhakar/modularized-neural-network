@@ -1,7 +1,4 @@
-package org.roshanp.Data;
-
-import org.roshanp.NeuralNetwork.NetworkData;
-import org.roshanp.NeuralNetwork.Vector;
+package org.roshanp.NeuralNetwork;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -52,4 +49,14 @@ public class IrisData extends NetworkData {
         return map.get(l.split(",")[4]);
     }
 
+    @Override
+    public Vector stepwise(Vector resultant) {
+        if (resultant.get(0) > resultant.get(1) && resultant.get(0) > resultant.get(2)) {
+            return new Vector(new double[]{1, 0, 0});
+        } else if (resultant.get(1) > resultant.get(0) && resultant.get(1) > resultant.get(2)) {
+            return new Vector(new double[]{0, 1, 0});
+        } else {
+            return new Vector(new double[]{0, 0, 1});
+        }
+    }
 }
