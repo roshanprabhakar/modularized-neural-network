@@ -183,6 +183,9 @@ public class NeuralNetwork {
 //                dataVis.reload();
                 performanceVis.update(lossf, gradientMagnitude, accuracy);
             }
+
+            if (epoch == 1100) learningRate = 0.1;
+            if (epoch == 2400) learningRate = 0.01;
         }
     }
 
