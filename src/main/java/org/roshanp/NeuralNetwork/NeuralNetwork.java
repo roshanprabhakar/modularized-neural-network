@@ -32,11 +32,11 @@ public class NeuralNetwork {
     private double minMomentum;
 
     /**
-     * @param layers layers[i] corresponds to the number of neurons at layer i in the network, where i is the layer index AFTER input
-     * @param inputSize input dimension
+     * @param layers       layers[i] corresponds to the number of neurons at layer i in the network, where i is the layer index AFTER input
+     * @param inputSize    input dimension
      * @param learningRate one of the factors for each component of the gradient
-     * @param maxMomentum max bounds for accelerating gradient updates
-     * @param minMomentum min bounds for decelerating gradient updates
+     * @param maxMomentum  max bounds for accelerating gradient updates
+     * @param minMomentum  min bounds for decelerating gradient updates
      */
     public NeuralNetwork(int[] layers, int inputSize, double learningRate, double maxMomentum, double minMomentum, Activator activator) {
         network = new ArrayList<>();
@@ -51,12 +51,12 @@ public class NeuralNetwork {
     }
 
     /**
-     * @param inputSize input dimension
+     * @param inputSize        input dimension
      * @param neuronsPerHidden constant neuron count among all layers
-     * @param numHiddenLayers number of layers in the network, including the output layer
-     * @param learningRate one of the factors for each component of the gradient
-     * @param maxMomentum max bounds for accelerating gradient updates
-     * @param minMomentum min bounds for decelerating gradient updates
+     * @param numHiddenLayers  number of layers in the network, including the output layer
+     * @param learningRate     one of the factors for each component of the gradient
+     * @param maxMomentum      max bounds for accelerating gradient updates
+     * @param minMomentum      min bounds for decelerating gradient updates
      */
     public NeuralNetwork(int inputSize, int neuronsPerHidden, int numHiddenLayers, double learningRate, double maxMomentum, double minMomentum, Activator activator) {
         network = new ArrayList<>();
@@ -75,9 +75,9 @@ public class NeuralNetwork {
         for (int layer = 0; layer < network.size(); layer++) {
             for (int neuron = 0; neuron < network.get(layer).length(); neuron++) {
                 for (int weight = 0; weight < network.get(layer).get(neuron).getWeights().length(); weight++) {
-                    network.get(layer).get(neuron).updateWeight(weight, Math.random() * scope * Math.pow(-1, (int)((Math.random())*10)));
+                    network.get(layer).get(neuron).updateWeight(weight, Math.random() * scope * Math.pow(-1, (int) ((Math.random()) * 10)));
                 }
-                network.get(layer).get(neuron).updateBias(Math.random() * scope * Math.pow(-1, (int)((Math.random())*10)));
+                network.get(layer).get(neuron).updateBias(Math.random() * scope * Math.pow(-1, (int) ((Math.random()) * 10)));
             }
         }
     }
@@ -184,8 +184,8 @@ public class NeuralNetwork {
                 performanceVis.update(lossf, gradientMagnitude, accuracy);
             }
 
-            if (epoch == 1100) learningRate = 0.1;
-            if (epoch == 2400) learningRate = 0.01;
+//            if (epoch == 260) learningRate = 0.01;
+//            if (epoxch == 2400) learningRate = 0.01;
         }
     }
 
@@ -464,7 +464,9 @@ public class NeuralNetwork {
         return sum * 0.5;
     }
 
-    public Layer getLayer(int l) {return network.get(l);}
+    public Layer getLayer(int l) {
+        return network.get(l);
+    }
 
     public int largestLayerSize() {
         int max = 0;
@@ -505,6 +507,23 @@ public class NeuralNetwork {
         public NetworkGradient(ArrayList<ArrayList<Vector>> dLossdWeights, ArrayList<ArrayList<Double>> dLossdBiases) {
             this.dLossdBiases = dLossdBiases;
             this.dLossdWeights = dLossdWeights;
+        }
+
+        public NetworkGradient(NeuralNetwork template) {
+
+            ArrayList<ArrayList<Vector>> dLossdWeights = new ArrayList<>();
+            ArrayList<ArrayList<Double>> dLossdBiases = new ArrayList<>();
+
+            for (int l = 0; l < template.numLayers(); l++) {
+                dLossdWeights.add(new ArrayList<>());
+                for (int n = 0; n < template.getLayer(l).length(); n++) {
+                    dLossdWeights.get(l).add(new Vector(template.getLayer(l).get(n).getWeights().length()));
+                }
+                dLossdBiases.add(new ArrayList<>(template.getLayer(l).length()));
+            }
+
+            this.dLossdWeights = dLossdWeights;
+            this.dLossdBiases = dLossdBiases;
         }
 
         public NetworkGradient() {
