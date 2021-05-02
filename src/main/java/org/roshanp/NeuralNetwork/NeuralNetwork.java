@@ -162,6 +162,7 @@ public class NeuralNetwork {
         double lossf;
         double accuracy;
 
+        NetworkGradient velocity = new NetworkGradient(this);
         while (true) {
 
             NetworkGradient cumulativeLossGradient = new NetworkGradient();
@@ -221,6 +222,21 @@ public class NeuralNetwork {
             }
         }
     }
+
+
+    /*
+    * Update rule to mimic calculus behind real world physical accumulated effect of acceleration
+    * where A = network parallel of acceleration due to gravity,
+    * where a = acceleration along the dimension of weight n
+    * where v = accumulated velocity
+    *
+    * a = A/2 * sin(2 *
+    * {L'(w) > 0: arctan(L'(w))+pi/2}
+    * {L'(w) = 0: 0}
+    * {L'(w) < 0: arctan(1/L'(w))}
+    *
+    * vi = sqrt(2 * [accumulator from wi-1 to wi](a(w))[dw]
+    * */
 
     //converts a loss vector to an update vector which can be directly applied to the network's weights and bias vector
     public NetworkGradient getUpdateVector(NetworkGradient gradient) {
