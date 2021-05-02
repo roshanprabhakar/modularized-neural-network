@@ -225,18 +225,18 @@ public class NeuralNetwork {
 
 
     /*
-    * Update rule to mimic calculus behind real world physical accumulated effect of acceleration
-    * where A = network parallel of acceleration due to gravity,
-    * where a = acceleration along the dimension of weight n
-    * where v = accumulated velocity
-    *
-    * a = A/2 * sin(2 *
-    * {L'(w) > 0: arctan(L'(w))+pi/2}
-    * {L'(w) = 0: 0}
-    * {L'(w) < 0: arctan(1/L'(w))}
-    *
-    * vi = sqrt(2 * [accumulator from wi-1 to wi](a(w))[dw]
-    * */
+     * Update rule to mimic calculus behind real world physical accumulated effect of acceleration
+     * where A = network parallel of acceleration due to gravity,
+     * where a = acceleration along the dimension of weight n
+     * where v = accumulated velocity
+     *
+     * a = A/2 * sin(2 *
+     * {L'(w) > 0: arctan(L'(w))+pi/2}
+     * {L'(w) = 0: 0}
+     * {L'(w) < 0: arctan(1/L'(w))}
+     *
+     * vi = sqrt(2 * [accumulator from wi-1 to wi](a(w))[dw]
+     * */
 
     //converts a loss vector to an update vector which can be directly applied to the network's weights and bias vector
     public NetworkGradient getUpdateVector(NetworkGradient gradient) {
@@ -253,31 +253,47 @@ public class NeuralNetwork {
             for (int neuron = 0; neuron < dLossdWeights.get(layer).size(); neuron++) {
 
                 Vector updates = new Vector(dLossdWeights.get(layer).get(neuron).length());
+
                 for (int weight = 0; weight < updates.length(); weight++) {
-//                    if (dLossdWeights.get(layer).get(neuron).get(weight) < 0) {
-//                        updates.set(weight, learningRate * momentum);
-//                    } else if (dLossdWeights.get(layer).get(neuron).get(weight) > 0) {
-//                        updates.set(weight, -learningRate * momentum);
-//                    } else {
-//                        updates.set(weight, Math.pow(-1, (int) (Math.random() * 10)) * learningRate * momentum);
-//                    }
+
                     updates.set(weight, -1 * learningRate * dLossdWeights.get(layer).get(neuron).get(weight));
                 }
                 thisLayerW.add(updates);
 
-//                if (dLossdBiases.get(layer).get(neuron) < 0) {
-//                    thisLayerB.add(learningRate * momentum);
-//                } else if (dLossdBiases.get(layer).get(neuron) > 0) {
-//                    thisLayerB.add(-learningRate * momentum);
-//                } else {
-//                    thisLayerB.add(Math.pow(-1, (int) (Math.random() * 10)) * learningRate * momentum);
-//                }
+
                 thisLayerB.add(-1 * learningRate * dLossdBiases.get(layer).get(neuron));
             }
             weightUpdates.add(thisLayerW);
             biasUpdates.add(thisLayerB);
         }
         return new NetworkGradient(weightUpdates, biasUpdates);
+    }
+
+    /**
+     * @param wp slope of loss against weight in the considered dimension
+     * @param a  gravitational acceleration
+     * @return acceleration in current weight space
+     */
+    private static double a(double wp, double a) {
+        double piecewise;
+        if (wp > 0) {
+            piecewise = Math.atan(wp) + Math.PI / 2.0;
+        } else if (wp < 0) {
+            piecewise = Math.atan(1/wp);
+        } else {
+            piecewise = 0;
+        }
+        return a / 2.0 * Math.sin(piecewise);
+    }
+
+    /**
+     * @param ah acceleration corresponding to the position for the previous iteration in time
+     * @param ai acceleration corresponding to the current position
+     * @param dw the magnitude in weight update along this dimension from h to i
+     * @return current velocity
+     */
+    private static double v(double ah, double ai, double dw) {
+        return Math.sqrt((dw * (ah + ai))); //trapezoidal area considered, not true integral
     }
 
     //for the specified input-output pair, calculates the derivative of loss with respect to each weight and bias
