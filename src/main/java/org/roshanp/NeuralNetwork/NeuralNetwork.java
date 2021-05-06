@@ -24,50 +24,40 @@ public class NeuralNetwork {
     //input data dimension
     private int inputSize;
 
-    //learningRate * maxMomentum = largest possible step size
-    private double learningRate;
-    private double maxMomentum;
-
-    //training ends when gradient momentum reaches or surpasses minMomentum
-    private double minMomentum;
+    //learning parameters
+    private double g; //gravitational acceleration
 
     /**
      * @param layers       layers[i] corresponds to the number of neurons at layer i in the network, where i is the layer index AFTER input
      * @param inputSize    input dimension
-     * @param learningRate one of the factors for each component of the gradient
-     * @param maxMomentum  max bounds for accelerating gradient updates
-     * @param minMomentum  min bounds for decelerating gradient updates
+     * @param g magnitude of gravitational acceleration driving the weight updates
+     * @param activator type of activation function applied at every neuron
      */
-    public NeuralNetwork(int[] layers, int inputSize, double learningRate, double maxMomentum, double minMomentum, Activator activator) {
+    public NeuralNetwork(int[] layers, int inputSize, double g, Activator activator) {
         network = new ArrayList<>();
         network.add(new Layer(layers[0], inputSize, activator));
         for (int layer = 1; layer < layers.length; layer++) {
             network.add(new Layer(layers[layer], layers[layer - 1], activator));
         }
         this.inputSize = inputSize;
-        this.learningRate = learningRate;
-        this.maxMomentum = maxMomentum;
-        this.minMomentum = minMomentum;
+        this.g = g;
     }
 
     /**
      * @param inputSize        input dimension
      * @param neuronsPerHidden constant neuron count among all layers
      * @param numHiddenLayers  number of layers in the network, including the output layer
-     * @param learningRate     one of the factors for each component of the gradient
-     * @param maxMomentum      max bounds for accelerating gradient updates
-     * @param minMomentum      min bounds for decelerating gradient updates
+     * @param activator the activator applied at every neuron
+     * @param g gravitational acceleration driving weight updates
      */
-    public NeuralNetwork(int inputSize, int neuronsPerHidden, int numHiddenLayers, double learningRate, double maxMomentum, double minMomentum, Activator activator) {
+    public NeuralNetwork(int inputSize, int neuronsPerHidden, int numHiddenLayers, Activator activator, double g) {
         network = new ArrayList<>();
         network.add(new Layer(neuronsPerHidden, inputSize, activator));
         for (int i = 0; i < numHiddenLayers - 1; i++) {
             network.add(new Layer(neuronsPerHidden, neuronsPerHidden, activator));
         }
         this.inputSize = inputSize;
-        this.learningRate = learningRate;
-        this.maxMomentum = maxMomentum;
-        this.minMomentum = minMomentum;
+        this.g = g;
     }
 
     //randomly reset all weights and biases
@@ -229,45 +219,40 @@ public class NeuralNetwork {
      * where A = network parallel of acceleration due to gravity,
      * where a = acceleration along the dimension of weight n
      * where v = accumulated velocity
+     * where w = position in weight space
+     * where L(x) = loss as a function of weights x
      *
      * a = A/2 * sin(2 *
-     * {L'(w) > 0: arctan(L'(w))+pi/2}
+     * {L'(w) > 0: -arctan(1/L(w))}
      * {L'(w) = 0: 0}
-     * {L'(w) < 0: arctan(1/L'(w))}
+     * {L'(w) < 0: arctan(1/-L(x))}
      *
-     * vi = sqrt(2 * [accumulator from wi-1 to wi](a(w))[dw]
+     * vi = ± sqrt(2 * [integral from wi-1 to wi](a(w))[dw] + (vi-1)^2)
      * */
 
     //converts a loss vector to an update vector which can be directly applied to the network's weights and bias vector
-    public NetworkGradient getUpdateVector(NetworkGradient gradient) {
+    //dnetwork = velocity across a single epoch
+    public NetworkGradient getUpdateVector(NetworkGradient slope, NetworkGradient oldSlope, NetworkGradient velocity) {
 
-        ArrayList<ArrayList<Vector>> dLossdWeights = gradient.getdLossdWeights();
-        ArrayList<ArrayList<Double>> dLossdBiases = gradient.getdLossdBiases();
-
-        ArrayList<ArrayList<Vector>> weightUpdates = new ArrayList<>();
-        ArrayList<ArrayList<Double>> biasUpdates = new ArrayList<>();
+        NetworkGradient weightUpdates = new NetworkGradient(this);
+        NetworkGradient biasUpdates = new NetworkGradient(this);
 
         for (int layer = 0; layer < network.size(); layer++) {
-            ArrayList<Vector> thisLayerW = new ArrayList<>();
-            ArrayList<Double> thisLayerB = new ArrayList<>();
-            for (int neuron = 0; neuron < dLossdWeights.get(layer).size(); neuron++) {
-
-                Vector updates = new Vector(dLossdWeights.get(layer).get(neuron).length());
-
-                for (int weight = 0; weight < updates.length(); weight++) {
-
-                    updates.set(weight, -1 * learningRate * dLossdWeights.get(layer).get(neuron).get(weight));
+            for (int neuron = 0; neuron < network.get(layer).length(); neuron++) {
+                for (int weight = 0; weight < network.get(layer).get(neuron).getWeights().length(); weight++) {
+                    double iwacc = a(slope.dLossdWeights.get(layer).get(neuron).get(weight), g);
+                    double hwacc = a(oldSlope.dLossdWeights.get(layer).get(neuron).get(weight), g);
+                    //update velocity accordingly, remember v(p) only returns magnitude of change, not direction
                 }
-                thisLayerW.add(updates);
 
-
-                thisLayerB.add(-1 * learningRate * dLossdBiases.get(layer).get(neuron));
+                double ibacc;
+                double hbacc;
             }
-            weightUpdates.add(thisLayerW);
-            biasUpdates.add(thisLayerB);
         }
-        return new NetworkGradient(weightUpdates, biasUpdates);
+
+        return velocity;
     }
+    //directly accumulates velocity object
 
     /**
      * @param wp slope of loss against weight in the considered dimension
