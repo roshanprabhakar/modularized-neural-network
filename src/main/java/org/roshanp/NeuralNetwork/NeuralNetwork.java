@@ -126,7 +126,7 @@ public class NeuralNetwork {
     }
 
     //TODO pause/resume training functionality (multi-threaded run + observing controllers)
-    public void train(ArrayList<NetworkData> trainingData, boolean verbose) {
+    public void train(ArrayList<NetworkData> trainingData, boolean verbose) throws InterruptedException {
 
 //        NetworkVisualizer networkVis = null;
 //        DataVisualizer dataVis = null;
@@ -148,6 +148,14 @@ public class NeuralNetwork {
         double accuracy;
 
         NetworkGradient velocity = new NetworkGradient(this, initial_velocity);
+
+        //initial iteration: step size is initial velocity
+        NetworkGradient previousLossGradient = new NetworkGradient();
+        for (NetworkData data : trainingData) {
+            previousLossGradient.add(getGradient(data.getInput(), data.getOutput()));
+        }
+        updateWeightsAndBiases(velocity);
+
         while (true) {
 
             NetworkGradient cumulativeLossGradient = new NetworkGradient();
@@ -155,7 +163,7 @@ public class NeuralNetwork {
                 cumulativeLossGradient.add(getGradient(data.getInput(), data.getOutput()));
             }
 
-            NetworkGradient updateGradient = getUpdateVector(cumulativeLossGradient);
+            NetworkGradient updateGradient = getUpdateVector(cumulativeLossGradient, previousLossGradient, velocity);
             updateWeightsAndBiases(updateGradient);
 
             double gradientMagnitude = getGradientMagnitude(cumulativeLossGradient);
@@ -170,41 +178,9 @@ public class NeuralNetwork {
                 performanceVis.update(lossf, gradientMagnitude, accuracy);
             }
 
-//            if (epoch == 260) learningRate = 0.01;
-//            if (epoxch == 2400) learningRate = 0.01;
-        }
-    }
+            previousLossGradient = cumulativeLossGradient;
 
-    //given a gradient, calculates the magnitude of that gradient
-    public double getGradientMagnitude(NetworkGradient networkOutput) {
-        double magnitude = 0;
-        for (ArrayList<Vector> layer : networkOutput.getdLossdWeights()) {
-            for (Vector neuron : layer) {
-                for (double weight : neuron.getVector()) {
-                    magnitude += weight * weight;
-                }
-            }
-        }
-        for (ArrayList<Double> layer : networkOutput.getdLossdBiases()) {
-            for (Double dlossdbias : layer) {
-                magnitude += dlossdbias * dlossdbias;
-            }
-        }
-        return Math.sqrt(magnitude);
-    }
-
-    //given an update vector, updates this network accordingly
-    public void updateWeightsAndBiases(NetworkGradient updateVector) {
-        for (int layer = 0; layer < network.size(); layer++) {
-            for (int neuron = 0; neuron < network.get(layer).length(); neuron++) {
-
-                Perceptron perceptron = network.get(layer).get(neuron);
-
-                for (int weight = 0; weight < perceptron.getWeights().length(); weight++) {
-                    perceptron.getWeights().set(weight, perceptron.getWeights().get(weight) + updateVector.getdLossdWeights().get(layer).get(neuron).get(weight));
-                }
-                perceptron.updateBias(perceptron.getBias() + updateVector.getdLossdBiases().get(layer).get(neuron));
-            }
+            Thread.sleep(100);
         }
     }
 
@@ -260,7 +236,6 @@ public class NeuralNetwork {
 
         return velocity;
     }
-    //directly accumulates velocity object
 
     /**
      * @param wp slope of loss against weight in the considered dimension
@@ -313,6 +288,39 @@ public class NeuralNetwork {
             return -1 * Math.sqrt(vi * -1);
         } else {
             return initial_velocity;
+        }
+    }
+
+    //given a gradient, calculates the magnitude of that gradient
+    public double getGradientMagnitude(NetworkGradient networkOutput) {
+        double magnitude = 0;
+        for (ArrayList<Vector> layer : networkOutput.getdLossdWeights()) {
+            for (Vector neuron : layer) {
+                for (double weight : neuron.getVector()) {
+                    magnitude += weight * weight;
+                }
+            }
+        }
+        for (ArrayList<Double> layer : networkOutput.getdLossdBiases()) {
+            for (Double dlossdbias : layer) {
+                magnitude += dlossdbias * dlossdbias;
+            }
+        }
+        return Math.sqrt(magnitude);
+    }
+
+    //given an update vector, updates this network accordingly
+    public void updateWeightsAndBiases(NetworkGradient updateVector) {
+        for (int layer = 0; layer < network.size(); layer++) {
+            for (int neuron = 0; neuron < network.get(layer).length(); neuron++) {
+
+                Perceptron perceptron = network.get(layer).get(neuron);
+
+                for (int weight = 0; weight < perceptron.getWeights().length(); weight++) {
+                    perceptron.getWeights().set(weight, perceptron.getWeights().get(weight) + updateVector.getdLossdWeights().get(layer).get(neuron).get(weight));
+                }
+                perceptron.updateBias(perceptron.getBias() + updateVector.getdLossdBiases().get(layer).get(neuron));
+            }
         }
     }
 
@@ -571,7 +579,8 @@ public class NeuralNetwork {
                 for (int n = 0; n < template.get(l).length(); n++) {
                     dLossdWeights.get(l).add(new Vector(template.get(l).get(n).getWeights().length()));
                 }
-                dLossdBiases.add(new ArrayList<>(template.get(l).length()));
+                dLossdBiases.add(new ArrayList<>());
+                for (int i = 0; i < template.get(l).length(); i++) dLossdBiases.get(dLossdBiases.size() - 1).add(0.0);
             }
 
             this.dLossdWeights = dLossdWeights;
@@ -582,7 +591,7 @@ public class NeuralNetwork {
             this(template);
             for (int l = 0; l < template.numLayers(); l++) {
                 for (int n = 0; n < template.get(l).length(); n++) {
-                    for (int w = 0; w < template.get(l).get(n).getWeights().length()) {
+                    for (int w = 0; w < template.get(l).get(n).getWeights().length(); w++) {
                         dLossdWeights.get(l).get(n).set(w, c);
                     }
                     dLossdBiases.get(l).set(n, c);
@@ -613,6 +622,17 @@ public class NeuralNetwork {
 
         public ArrayList<ArrayList<Double>> getdLossdBiases() {
             return dLossdBiases;
+        }
+
+        public String toString() {
+            StringBuilder out = new StringBuilder();
+            for (int l = 0; l < dLossdWeights.size(); l++) {
+                for (int n = 0; n < dLossdWeights.get(l).size(); n++) {
+                    out.append(dLossdWeights.get(l).get(n)).append(" ").append(dLossdBiases.get(l).get(n)).append("    ");
+                }
+                out.append("\n");
+            }
+            return out.toString();
         }
     }
 

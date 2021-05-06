@@ -26,19 +26,21 @@ public class NetworkExec {
 //            testData.add(data.get(i));
 //        }
 
-        NeuralNetwork network = new NeuralNetwork(new int[]{4,4,4,3}, 4, 0.1, 10, 0.001, NeuralNetwork.sigmoid);
+//        public NeuralNetwork(int[] layers, int inputSize, double g, double vi, Activator activator) {
+
+        NeuralNetwork network = new NeuralNetwork(new int[]{4,4,4,3}, 4, 9.8, 0.01, NeuralNetwork.sigmoid);
         network.train(data, true);
 
-        for (int i = 0; i < data.size(); i++) {
-            System.out.println("----------------------");
-            System.out.println("Test input: " + data.get(i).getInput());
-            System.out.println("Test actual: " + data.get(i).getOutput());
-            NeuralNetwork.ForwardPropOutput output = network.forwardProp(data.get(i).getInput());
-            System.out.println("Network output: " + output.getResultant());
-            System.out.println("----------------------");
-        }
-
-        System.out.println("cumulative loss: " + NeuralNetwork.cumulativeLoss(data, network));
+//        for (int i = 0; i < data.size(); i++) {
+//            System.out.println("----------------------");
+//            System.out.println("Test input: " + data.get(i).getInput());
+//            System.out.println("Test actual: " + data.get(i).getOutput());
+//            NeuralNetwork.ForwardPropOutput output = network.forwardProp(data.get(i).getInput());
+//            System.out.println("Network output: " + output.getResultant());
+//            System.out.println("----------------------");
+//        }
+//
+//        System.out.println("cumulative loss: " + NeuralNetwork.cumulativeLoss(data, network));
     }
 }
 
