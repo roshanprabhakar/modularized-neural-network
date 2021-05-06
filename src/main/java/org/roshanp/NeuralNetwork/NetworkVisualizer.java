@@ -1,7 +1,6 @@
 package org.roshanp.NeuralNetwork;
 
 import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 
 public class NetworkVisualizer extends JFrame {
@@ -44,8 +43,8 @@ public class NetworkVisualizer extends JFrame {
 
     public void update() {
         for (int layer = 0; layer < network.numLayers(); layer++) {
-            for (int neuron = 0; neuron < network.getLayer(layer).length(); neuron++) {
-                set(neuron, layer, network.getLayer(layer).get(neuron).getWeights().toString());
+            for (int neuron = 0; neuron < network.get(layer).length(); neuron++) {
+                set(neuron, layer, network.get(layer).get(neuron).getWeights().toString());
             }
         }
     }

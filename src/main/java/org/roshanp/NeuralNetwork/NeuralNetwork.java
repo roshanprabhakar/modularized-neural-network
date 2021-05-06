@@ -1,15 +1,8 @@
 package org.roshanp.NeuralNetwork;
 
-import org.jfree.chart.ChartFactory;
-import org.jfree.chart.ChartPanel;
-import org.jfree.chart.JFreeChart;
-import org.jfree.data.xy.XYDataset;
-import org.jfree.data.xy.XYSeries;
-import org.jfree.data.xy.XYSeriesCollection;
 import org.roshanp.NeuralNetwork.Activations.Activator;
 import org.roshanp.NeuralNetwork.Activations.Sigmoid;
 
-import javax.swing.*;
 import java.util.ArrayList;
 
 //IMPORTANT
@@ -26,14 +19,16 @@ public class NeuralNetwork {
 
     //learning parameters
     private double g; //gravitational acceleration
+    private double initial_velocity; //initial step size
 
     /**
-     * @param layers       layers[i] corresponds to the number of neurons at layer i in the network, where i is the layer index AFTER input
-     * @param inputSize    input dimension
-     * @param g magnitude of gravitational acceleration driving the weight updates
+     * @param layers    layers[i] corresponds to the number of neurons at layer i in the network, where i is the layer index AFTER input
+     * @param inputSize input dimension
+     * @param g         magnitude of gravitational acceleration driving the weight updates
+     * @param vi        initial velocity of training decent
      * @param activator type of activation function applied at every neuron
      */
-    public NeuralNetwork(int[] layers, int inputSize, double g, Activator activator) {
+    public NeuralNetwork(int[] layers, int inputSize, double g, double vi, Activator activator) {
         network = new ArrayList<>();
         network.add(new Layer(layers[0], inputSize, activator));
         for (int layer = 1; layer < layers.length; layer++) {
@@ -41,16 +36,18 @@ public class NeuralNetwork {
         }
         this.inputSize = inputSize;
         this.g = g;
+        this.initial_velocity = vi;
     }
 
     /**
      * @param inputSize        input dimension
      * @param neuronsPerHidden constant neuron count among all layers
      * @param numHiddenLayers  number of layers in the network, including the output layer
-     * @param activator the activator applied at every neuron
-     * @param g gravitational acceleration driving weight updates
+     * @param g                gravitational acceleration driving weight updates
+     * @param vi               initial velocity of training decent
+     * @param activator        the activator applied at every neuron
      */
-    public NeuralNetwork(int inputSize, int neuronsPerHidden, int numHiddenLayers, Activator activator, double g) {
+    public NeuralNetwork(int inputSize, int neuronsPerHidden, int numHiddenLayers, double g, double vi, Activator activator) {
         network = new ArrayList<>();
         network.add(new Layer(neuronsPerHidden, inputSize, activator));
         for (int i = 0; i < numHiddenLayers - 1; i++) {
@@ -58,6 +55,7 @@ public class NeuralNetwork {
         }
         this.inputSize = inputSize;
         this.g = g;
+        this.initial_velocity = vi;
     }
 
     //randomly reset all weights and biases
@@ -127,9 +125,6 @@ public class NeuralNetwork {
         return (finalLoss - initialLoss) / h;
     }
 
-    //training when recalculating loss is not feasible
-    //TODO update to depend on gradient of respective dimension
-    //TODO momentum to depend on concavity of respective dimension
     //TODO pause/resume training functionality (multi-threaded run + observing controllers)
     public void train(ArrayList<NetworkData> trainingData, boolean verbose) {
 
@@ -152,7 +147,7 @@ public class NeuralNetwork {
         double lossf;
         double accuracy;
 
-        NetworkGradient velocity = new NetworkGradient(this);
+        NetworkGradient velocity = new NetworkGradient(this, initial_velocity);
         while (true) {
 
             NetworkGradient cumulativeLossGradient = new NetworkGradient();
@@ -231,8 +226,15 @@ public class NeuralNetwork {
      * */
 
     //converts a loss vector to an update vector which can be directly applied to the network's weights and bias vector
-    //dnetwork = velocity across a single epoch
-    public NetworkGradient getUpdateVector(NetworkGradient slope, NetworkGradient oldSlope, NetworkGradient velocity) {
+    //update function: dnetwork = velocity across a single epoch
+
+    /**
+     * @param dLdWB    derivative of loss with respect to w&b at current iteration
+     * @param olddLdWB derivative of loss with respect to w&b at previous iteration
+     * @param velocity velocity across every weight and bias dimension
+     * @return necessary updates to the velocity vector
+     */
+    public NetworkGradient getUpdateVector(NetworkGradient dLdWB, NetworkGradient olddLdWB, NetworkGradient velocity) {
 
         NetworkGradient weightUpdates = new NetworkGradient(this);
         NetworkGradient biasUpdates = new NetworkGradient(this);
@@ -240,13 +242,19 @@ public class NeuralNetwork {
         for (int layer = 0; layer < network.size(); layer++) {
             for (int neuron = 0; neuron < network.get(layer).length(); neuron++) {
                 for (int weight = 0; weight < network.get(layer).get(neuron).getWeights().length(); weight++) {
-                    double iwacc = a(slope.dLossdWeights.get(layer).get(neuron).get(weight), g);
-                    double hwacc = a(oldSlope.dLossdWeights.get(layer).get(neuron).get(weight), g);
-                    //update velocity accordingly, remember v(p) only returns magnitude of change, not direction
+                    velocity.dLossdWeights.get(layer).get(neuron).set(weight, v(
+                            velocity.dLossdWeights.get(layer).get(neuron).get(weight),
+                            olddLdWB.dLossdWeights.get(layer).get(neuron).get(weight),
+                            dLdWB.dLossdWeights.get(layer).get(neuron).get(weight),
+                            velocity.dLossdWeights.get(layer).get(neuron).get(weight)
+                    ));
                 }
-
-                double ibacc;
-                double hbacc;
+                velocity.dLossdBiases.get(layer).set(neuron, v(
+                        velocity.dLossdBiases.get(layer).get(neuron),
+                        olddLdWB.dLossdBiases.get(layer).get(neuron),
+                        dLdWB.dLossdBiases.get(layer).get(neuron),
+                        velocity.dLossdBiases.get(layer).get(neuron)
+                ));
             }
         }
 
@@ -256,29 +264,56 @@ public class NeuralNetwork {
 
     /**
      * @param wp slope of loss against weight in the considered dimension
-     * @param a  gravitational acceleration
      * @return acceleration in current weight space
      */
-    private static double a(double wp, double a) {
+    private double a(double wp) {
         double piecewise;
         if (wp > 0) {
-            piecewise = Math.atan(wp) + Math.PI / 2.0;
+            piecewise = -2 * Math.atan(1 / wp);
         } else if (wp < 0) {
-            piecewise = Math.atan(1/wp);
+            piecewise = 2 * Math.atan(1 / (-1 * wp));
         } else {
             piecewise = 0;
         }
-        return a / 2.0 * Math.sin(piecewise);
+        return g / 2.0 * Math.sin(piecewise);
     }
 
     /**
-     * @param ah acceleration corresponding to the position for the previous iteration in time
-     * @param ai acceleration corresponding to the current position
-     * @param dw the magnitude in weight update along this dimension from h to i
+     * @param vh  velocity at previous iteration
+     * @param wph weight derivative at previous iteration
+     * @param wpi weight derivative at current iteration
+     * @param dw  change in weight from previous to current iterations
      * @return current velocity
+     * <p>
+     * in the implemented update, dw = vh
      */
-    private static double v(double ah, double ai, double dw) {
-        return Math.sqrt((dw * (ah + ai))); //trapezoidal area considered, not true integral
+    private double v(double vh, double wph, double wpi, double dw) {
+
+        double ai = a(wpi);
+        double ah = a(wph);
+
+        double a = (ai * (ai / ah) + 1) / 2;
+        double b = (dw * ai) / (2 * ((ai / ah) + 1));
+
+        double dv;
+        if (ah < 0 && ai > 0) {
+            dv = a - b;
+        } else if (ah > 0 && ai < 0) {
+            dv = b - a;
+        } else {
+            dv = ((dw) / 2.0) * (ah + ai);
+        }
+
+        System.out.println("dv: " + dv);
+
+        double vi = vh * vh + dv;
+        if (vi > 0) {
+            return Math.sqrt(vi);
+        } else if (vi < 0) {
+            return -1 * Math.sqrt(vi * -1);
+        } else {
+            return initial_velocity;
+        }
     }
 
     //for the specified input-output pair, calculates the derivative of loss with respect to each weight and bias
@@ -481,7 +516,7 @@ public class NeuralNetwork {
         return sum * 0.5;
     }
 
-    public Layer getLayer(int l) {
+    public Layer get(int l) {
         return network.get(l);
     }
 
@@ -533,14 +568,26 @@ public class NeuralNetwork {
 
             for (int l = 0; l < template.numLayers(); l++) {
                 dLossdWeights.add(new ArrayList<>());
-                for (int n = 0; n < template.getLayer(l).length(); n++) {
-                    dLossdWeights.get(l).add(new Vector(template.getLayer(l).get(n).getWeights().length()));
+                for (int n = 0; n < template.get(l).length(); n++) {
+                    dLossdWeights.get(l).add(new Vector(template.get(l).get(n).getWeights().length()));
                 }
-                dLossdBiases.add(new ArrayList<>(template.getLayer(l).length()));
+                dLossdBiases.add(new ArrayList<>(template.get(l).length()));
             }
 
             this.dLossdWeights = dLossdWeights;
             this.dLossdBiases = dLossdBiases;
+        }
+
+        public NetworkGradient(NeuralNetwork template, double c) {
+            this(template);
+            for (int l = 0; l < template.numLayers(); l++) {
+                for (int n = 0; n < template.get(l).length(); n++) {
+                    for (int w = 0; w < template.get(l).get(n).getWeights().length()) {
+                        dLossdWeights.get(l).get(n).set(w, c);
+                    }
+                    dLossdBiases.get(l).set(n, c);
+                }
+            }
         }
 
         public NetworkGradient() {
