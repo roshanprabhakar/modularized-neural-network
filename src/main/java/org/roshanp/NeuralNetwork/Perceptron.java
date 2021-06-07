@@ -36,6 +36,8 @@ public class Perceptron {
     public Vector getWeights() {
         return this.weights;
     }
+    public double get(int weight) {return weights.get(weight);}
+
     public double getBias() {
         return bias;
     }

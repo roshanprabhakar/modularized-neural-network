@@ -1,11 +1,14 @@
-package org.roshanp.NeuralNetwork;
+package org.roshanp.NeuralNetwork.Visualizers;
+
+import org.roshanp.NeuralNetwork.NetworkData;
+import org.roshanp.NeuralNetwork.NeuralNetwork;
 
 import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.Collections;
 
-public class DataVisualizer extends JFrame {
+public class OutputProgression extends JFrame {
 
     //loads 20 data points
     private static final int rows = 10;
@@ -16,7 +19,7 @@ public class DataVisualizer extends JFrame {
 
     private JTextField[][] REF;
 
-    public DataVisualizer(ArrayList<NetworkData> data, NeuralNetwork network) {
+    public OutputProgression(ArrayList<NetworkData> data, NeuralNetwork network) {
         super("data visualizer");
 
         Collections.shuffle(data);

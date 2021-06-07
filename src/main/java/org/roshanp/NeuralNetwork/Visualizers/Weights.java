@@ -1,9 +1,11 @@
-package org.roshanp.NeuralNetwork;
+package org.roshanp.NeuralNetwork.Visualizers;
+
+import org.roshanp.NeuralNetwork.NeuralNetwork;
 
 import javax.swing.*;
 import java.awt.*;
 
-public class NetworkVisualizer extends JFrame {
+public class Weights extends JFrame {
 
     private int rows;
     private int cols;
@@ -12,7 +14,7 @@ public class NetworkVisualizer extends JFrame {
 
     private NeuralNetwork network;
 
-    public NetworkVisualizer(NeuralNetwork network) {
+    public Weights(NeuralNetwork network) {
         super("network visualizer");
 
         rows = network.largestLayerSize();
