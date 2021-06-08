@@ -26,7 +26,7 @@ public class NetworkExec {
 //            testData.add(data.get(i));
 //        }
 
-        NeuralNetwork network = new NeuralNetwork(new int[]{3}, 4, 1, -0.000001, NeuralNetwork.sigmoid);
+        NeuralNetwork network = new NeuralNetwork(new int[]{3}, 4, 1, 0.00000001, NeuralNetwork.sigmoid);
         network.train(data, true);
 
 //        for (int i = 0; i < data.size(); i++) {
@@ -39,6 +39,8 @@ public class NetworkExec {
 //        }
 //
 //        System.out.println("cumulative loss: " + NeuralNetwork.cumulativeLoss(data, network));
+
+        Thread.sleep(100000);
     }
 }
 

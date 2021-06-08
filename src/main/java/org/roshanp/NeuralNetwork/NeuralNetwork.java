@@ -3,8 +3,10 @@ package org.roshanp.NeuralNetwork;
 import org.roshanp.NeuralNetwork.Activations.Activator;
 import org.roshanp.NeuralNetwork.Activations.Sigmoid;
 import org.roshanp.NeuralNetwork.Visualizers.Chart;
+import org.roshanp.NeuralNetwork.Visualizers.ChartHolder;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 
 //IMPORTANT
 //all data must be bounded in input and output by the scope of the activation function (layers 0 and n are activated by the specified activation, therefore bounded)
@@ -63,12 +65,23 @@ public class NeuralNetwork {
     //TODO pause/resume training functionality (multi-threaded run + observing controllers)
     public void train(ArrayList<NetworkData> trainingData, boolean verbose) throws InterruptedException {
 
-        Chart chart = null;
+        Chart lossChart = null;
+        Chart velocityChart = null;
+        Chart accelChart = null;
 
         if (verbose) {
-            chart = new Chart("Single Weight Visualizer", "weight", "loss", this);
-            chart.addSeries("weight");
-            chart.display();
+            lossChart = new Chart("Position", "weight", "loss", this);
+            lossChart.addSeries("weight");
+
+            velocityChart = new Chart("Velocity", "epoch", "Velocity", this);
+            velocityChart.addSeries("velocity");
+
+            accelChart = new Chart("Acceleration", "epoch", "Acceleration", this);
+            accelChart.addSeries("acceleration");
+
+            ChartHolder holder = new ChartHolder(new ArrayList<>(Arrays.asList(lossChart, velocityChart, accelChart)), 2, 2);
+            holder.setVisible(true);
+
         }
 
         double epoch = 0;
@@ -83,34 +96,35 @@ public class NeuralNetwork {
             previousLossGradient.add(getGradient(data.getInput(), data.getOutput()));
         }
 
-        network.get(0).get(0).getWeights().set(0, -100);
+        //initialize weight position
+        network.get(0).get(0).getWeights().set(0, 0.1);
+        velocity.dLossdWeights.get(0).get(0).set(0, initial_velocity);
 
-        velocity.dLossdWeights.get(0).get(0).set(0, 0.1);
-        updateWeightsAndBiases(velocity, 0, 0, 0);
-
-        while (network.get(0).get(0).get(0) < 100) {
+        while (true) {
 
             NetworkGradient cumulativeLossGradient = new NetworkGradient();
             for (NetworkData data : trainingData) {
                 cumulativeLossGradient.add(getGradient(data.getInput(), data.getOutput()));
             }
 
-            NetworkGradient updateGradient = getUpdateVector(cumulativeLossGradient, previousLossGradient, velocity);
-
-            updateWeightsAndBiases(updateGradient, 0, 0, 0);
+            updateWeightsAndBiases(velocity, 0, 0, 0);
 
             double gradientMagnitude = getGradientMagnitude(cumulativeLossGradient);
             lossf = cumulativeLoss(trainingData, this);
-
-            epoch++;
-            accuracy = getAccuracy(trainingData, this);
+//            accuracy = getAccuracy(trainingData, this);
 
             if (verbose) {
-               chart.update("weight", network.get(0).get(0).get(0), lossf);
+               lossChart.update("weight", network.get(0).get(0).get(0), lossf);
+               velocityChart.update("velocity", epoch, velocity.dLossdWeights.get(0).get(0).get(0));
+               accelChart.update("acceleration", epoch, a(cumulativeLossGradient.dLossdWeights.get(0).get(0).get(0)));
             }
+
+            updateVelocity(velocity, previousLossGradient, cumulativeLossGradient);
 
             previousLossGradient = cumulativeLossGradient;
 
+            epoch++;
+            Thread.sleep(1000);
 
         }
     }
@@ -124,11 +138,7 @@ public class NeuralNetwork {
      * where w = position in weight space
      * where L(x) = loss as a function of weights x
      *
-     * a = A/2 * sin(2 *
-     * {L'(w) > 0: -arctan(1/L(w))}
-     * {L'(w) = 0: 0}
-     * {L'(w) < 0: arctan(1/-L(x))}
-     *
+     * a = A/2 * sin(-2 * atan(1/L'(w)))
      * vi = ± sqrt(2 * [integral from wi-1 to wi](a(w))[dw] + (vi-1)^2)
      * */
 
@@ -136,15 +146,21 @@ public class NeuralNetwork {
     //update function: dnetwork = velocity across a single epoch
 
     /**
-     * @param dLdWB    derivative of loss with respect to w&b at current iteration
-     * @param olddLdWB derivative of loss with respect to w&b at previous iteration
      * @param velocity velocity across every weight and bias dimension
-     * @return necessary updates to the velocity vector
      */
-    public NetworkGradient getUpdateVector(NetworkGradient dLdWB, NetworkGradient olddLdWB, NetworkGradient velocity) {
+    public void updateVelocity(NetworkGradient velocity, NetworkGradient mi, NetworkGradient mf) {
 
-        NetworkGradient weightUpdates = new NetworkGradient(this);
-        NetworkGradient biasUpdates = new NetworkGradient(this);
+        double vi = velocity.dLossdWeights.get(0).get(0).get(0);
+        double wi = network.get(0).get(0).get(0);
+        double wf = network.get(0).get(0).get(0) + vi;
+        double wpi = mi.dLossdWeights.get(0).get(0).get(0);
+        double wpf = mf.dLossdWeights.get(0).get(0).get(0);
+        double wom = 0.5 * (a(wpi) + a(wpf)) * vi; //trapezoidal integral
+        double kf = wom + 0.5 * (vi * vi);
+        double df = (vi / Math.abs(vi)) * (kf / Math.abs(kf));
+        double vf = Math.sqrt(2 * Math.abs(kf)) * df;
+
+        velocity.dLossdWeights.get(0).get(0).set(0, vf);
 
 //        for (int layer = 0; layer < network.size(); layer++) {
 //            for (int neuron = 0; neuron < network.get(layer).length(); neuron++) {
@@ -165,8 +181,6 @@ public class NeuralNetwork {
 //            }
 //        }
 
-
-        return velocity;
     }
 
     /**
@@ -174,15 +188,7 @@ public class NeuralNetwork {
      * @return acceleration in current weight space
      */
     private double a(double wp) {
-        double piecewise;
-        if (wp > 0) {
-            piecewise = -2 * Math.atan(1 / wp);
-        } else if (wp < 0) {
-            piecewise = 2 * Math.atan(1 / (-1 * wp));
-        } else {
-            piecewise = 0;
-        }
-        return g / 2.0 * Math.sin(piecewise);
+        return g / 2.0 * Math.sin(-2 * Math.atan(1 / wp));
     }
 
     /**
