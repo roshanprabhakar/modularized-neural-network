@@ -31,11 +31,11 @@ public class NeuralNetwork {
      * @param vi        initial velocity of training decent
      * @param activator type of activation function applied at every neuron
      */
-    public NeuralNetwork(int[] layers, int inputSize, double g, double vi, Activator activator) {
+    public NeuralNetwork(int[] layers, int inputSize, double g, double vi, Activator activator, boolean randominit) {
         network = new ArrayList<>();
-        network.add(new Layer(layers[0], inputSize, activator));
+        network.add(new Layer(layers[0], inputSize, activator, randominit));
         for (int layer = 1; layer < layers.length; layer++) {
-            network.add(new Layer(layers[layer], layers[layer - 1], activator));
+            network.add(new Layer(layers[layer], layers[layer - 1], activator, randominit));
         }
         this.inputSize = inputSize;
         this.g = g;
@@ -50,11 +50,11 @@ public class NeuralNetwork {
      * @param vi               initial velocity of training decent
      * @param activator        the activator applied at every neuron
      */
-    public NeuralNetwork(int inputSize, int neuronsPerHidden, int numHiddenLayers, double g, double vi, Activator activator) {
+    public NeuralNetwork(int inputSize, int neuronsPerHidden, int numHiddenLayers, double g, double vi, Activator activator, boolean randominit) {
         network = new ArrayList<>();
-        network.add(new Layer(neuronsPerHidden, inputSize, activator));
+        network.add(new Layer(neuronsPerHidden, inputSize, activator, randominit));
         for (int i = 0; i < numHiddenLayers - 1; i++) {
-            network.add(new Layer(neuronsPerHidden, neuronsPerHidden, activator));
+            network.add(new Layer(neuronsPerHidden, neuronsPerHidden, activator, randominit));
         }
         this.inputSize = inputSize;
         this.g = g;
@@ -63,6 +63,7 @@ public class NeuralNetwork {
 
 
     //TODO pause/resume training functionality (multi-threaded run + observing controllers)
+    //TODO implement training medium viscosity
     public void train(ArrayList<NetworkData> trainingData, boolean verbose) throws InterruptedException {
 
         Chart lossChart = null;
@@ -81,7 +82,6 @@ public class NeuralNetwork {
 
             ChartHolder holder = new ChartHolder(new ArrayList<>(Arrays.asList(lossChart, velocityChart, accelChart)), 2, 2);
             holder.setVisible(true);
-
         }
 
         double epoch = 0;
@@ -124,7 +124,7 @@ public class NeuralNetwork {
             previousLossGradient = cumulativeLossGradient;
 
             epoch++;
-            Thread.sleep(100);
+            Thread.sleep(500);
 
         }
     }
@@ -139,7 +139,7 @@ public class NeuralNetwork {
      * where L(x) = loss as a function of weights x
      *
      * a = A/2 * sin(-2 * atan(1/L'(w)))
-     * vi = ± sqrt(2 * [integral from wi-1 to wi](a(w))[dw] + (vi-1)^2)
+     * [integral wi -> wf](a(w))[dw] + vi^2/2 = vf^2/2
      * */
 
     //converts a loss vector to an update vector which can be directly applied to the network's weights and bias vector

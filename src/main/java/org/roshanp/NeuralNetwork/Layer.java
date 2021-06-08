@@ -1,16 +1,15 @@
 package org.roshanp.NeuralNetwork;
 
 import org.roshanp.NeuralNetwork.Activations.Activator;
-import org.roshanp.NeuralNetwork.Activations.Sigmoid;
 
-public class Layer implements NetworkConstants {
+public class Layer {
 
     private Perceptron[] neurons;
 
-    public Layer(int numberOfPerceptrons, int dataLength, Activator activator) {
+    public Layer(int numberOfPerceptrons, int dataLength, Activator activator, boolean randominit) {
         neurons = new Perceptron[numberOfPerceptrons];
         for (int i = 0; i < neurons.length; i++) {
-            neurons[i] = new Perceptron(activator, dataLength, true);
+            neurons[i] = new Perceptron(activator, dataLength, randominit);
         }
     }
 
