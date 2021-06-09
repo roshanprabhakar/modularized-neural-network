@@ -61,8 +61,8 @@ public class OutputProgression extends JFrame {
             }
         }
 
-        this.getContentPane().add(panel, BorderLayout.CENTER);
-        this.pack();
+        setContentPane(panel);
+        pack();
 
         reload();
     }

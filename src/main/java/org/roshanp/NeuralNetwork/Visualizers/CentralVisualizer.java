@@ -4,25 +4,25 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
 
-public class ChartHolder extends JFrame {
+public class CentralVisualizer extends JFrame {
 
-    private Chart[][] REF;
+    private JFrame[][] REF;
 
-    public ChartHolder(ArrayList<Chart> charts, int rows, int cols) {
+    public CentralVisualizer(ArrayList<JFrame> frames, int rows, int cols) {
         super("visualizer");
 
         JPanel panel = new JPanel();
         panel.setLayout(new GridLayout(rows, cols));
 
-        REF = new Chart[rows][cols];
+        REF = new JFrame[rows][cols];
 
-        for (int i = 0; i < charts.size(); i++) {
+        for (int i = 0; i < frames.size(); i++) {
 
             int col = i % cols;
             int row = (i - col) / cols;
 
-            REF[row][col] = charts.get(i);
-            panel.add(charts.get(i).getContentPane());
+            REF[row][col] = frames.get(i);
+            panel.add(frames.get(i).getContentPane());
         }
 
         this.setContentPane(panel);

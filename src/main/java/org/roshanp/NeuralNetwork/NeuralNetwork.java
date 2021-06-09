@@ -3,8 +3,11 @@ package org.roshanp.NeuralNetwork;
 import org.roshanp.NeuralNetwork.Activations.Activator;
 import org.roshanp.NeuralNetwork.Activations.Sigmoid;
 import org.roshanp.NeuralNetwork.Visualizers.Chart;
-import org.roshanp.NeuralNetwork.Visualizers.ChartHolder;
+import org.roshanp.NeuralNetwork.Visualizers.CentralVisualizer;
+import org.roshanp.NeuralNetwork.Visualizers.OutputProgression;
+import org.roshanp.NeuralNetwork.Visualizers.Weights;
 
+import javax.swing.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -69,18 +72,25 @@ public class NeuralNetwork {
         Chart lossChart = null;
         Chart velocityChart = null;
         Chart accelChart = null;
+        OutputProgression prog = null;
+        Weights weights = null;
 
         if (verbose) {
-            lossChart = new Chart("Position", "weight", "loss", this);
-            lossChart.addSeries("weight");
+            lossChart = new Chart("Performance", "epoch", "Y", this);
+            lossChart.addSeries("loss");
+            lossChart.addSeries("accuracy");
 
             velocityChart = new Chart("Velocity", "epoch", "Velocity", this);
-            velocityChart.addSeries("velocity");
+            velocityChart.addSeries("velocity over epoch");
 
-            accelChart = new Chart("Acceleration", "epoch", "Acceleration", this);
-            accelChart.addSeries("acceleration");
+            prog = new OutputProgression(trainingData, this);
+            weights = new Weights(this);
+//
+//            accelChart = new Chart("Acceleration", "epoch", "Acceleration", this);
+//            accelChart.addSeries("acceleration");
 
-            ChartHolder holder = new ChartHolder(new ArrayList<>(Arrays.asList(lossChart, velocityChart, accelChart)), 2, 2);
+//            ChartHolder holder = new ChartHolder(new ArrayList<>(Arrays.asList(lossChart, velocityChart, accelChart)), 2, 2);
+            CentralVisualizer holder = new CentralVisualizer(new ArrayList<JFrame>(Arrays.asList(lossChart, velocityChart, prog, weights)), 2, 2);
             holder.setVisible(true);
         }
 
@@ -96,12 +106,6 @@ public class NeuralNetwork {
             previousLossGradient.add(getGradient(data.getInput(), data.getOutput()));
         }
 
-        double lossi;
-
-        //initialize weight position
-        network.get(0).get(0).getWeights().set(0, 0.1);
-        velocity.dLossdWeights.get(0).get(0).set(0, initial_velocity);
-
         while (true) {
 
             NetworkGradient cumulativeLossGradient = new NetworkGradient();
@@ -109,16 +113,19 @@ public class NeuralNetwork {
                 cumulativeLossGradient.add(getGradient(data.getInput(), data.getOutput()));
             }
 
-            updateWeightsAndBiases(velocity, 0, 0, 0);
+            updateWeightsAndBiases(velocity);
 
-            double gradientMagnitude = getGradientMagnitude(cumulativeLossGradient);
+//            double gradientMagnitude = getGradientMagnitude(cumulativeLossGradient);
             lossf = cumulativeLoss(trainingData, this);
-//            accuracy = getAccuracy(trainingData, this);
+            accuracy = getAccuracy(trainingData, this);
 
             if (verbose) {
-               lossChart.update("weight", network.get(0).get(0).get(0), lossf);
-               velocityChart.update("velocity", epoch, velocity.dLossdWeights.get(0).get(0).get(0));
-               accelChart.update("acceleration", epoch, a(cumulativeLossGradient.dLossdWeights.get(0).get(0).get(0)));
+               lossChart.update("loss", epoch, lossf);
+               lossChart.update("accuracy", epoch, accuracy);
+               velocityChart.update("velocity", epoch, getGradientMagnitude(velocity));
+
+               prog.reload();
+               weights.update();
             }
 
             updateVelocity(velocity, previousLossGradient, cumulativeLossGradient);
@@ -126,7 +133,7 @@ public class NeuralNetwork {
             previousLossGradient = cumulativeLossGradient;
 
             epoch++;
-            Thread.sleep(800);
+            Thread.sleep(100);
 
         }
     }
@@ -152,17 +159,38 @@ public class NeuralNetwork {
      */
     public void updateVelocity(NetworkGradient velocity, NetworkGradient mi, NetworkGradient mf) {
 
-        double vi = velocity.dLossdWeights.get(0).get(0).get(0);
-        double wi = network.get(0).get(0).get(0);
-        double wf = network.get(0).get(0).get(0) + vi;
-        double wpi = mi.dLossdWeights.get(0).get(0).get(0);
-        double wpf = mf.dLossdWeights.get(0).get(0).get(0);
-        double wom = 0.5 * (a(wpi) + a(wpf)) * vi; //trapezoidal integral
-        double kf = wom + 0.5 * (vi * vi);
-        double df = (vi / Math.abs(vi)) * (kf / Math.abs(kf));
-        double vf = Math.sqrt(2 * Math.abs(kf)) * df;
+        for (int layer = 0; layer < network.size(); layer++) {
+            for (int neuron = 0; neuron < network.get(layer).length(); neuron++) {
+                for (int weight = 0; weight < network.get(layer).get(neuron).getWeights().length(); weight++) {
 
-        velocity.dLossdWeights.get(0).get(0).set(0, vf);
+                    double vi = velocity.dLossdWeights.get(layer).get(neuron).get(weight);
+                    double wi = network.get(layer).get(neuron).get(weight);
+                    double wf = network.get(layer).get(neuron).get(weight) + vi;
+                    double wpi = mi.dLossdWeights.get(layer).get(neuron).get(weight);
+                    double wpf = mf.dLossdWeights.get(layer).get(neuron).get(weight);
+                    double wom = 0.5 * (a(wpi) + a(wpf)) * vi; //trapezoidal integral
+                    double kf = wom + 0.5 * (vi * vi);
+                    double df = (vi / Math.abs(vi)) * (kf / Math.abs(kf));
+                    double vf = Math.sqrt(2 * Math.abs(kf)) * df;
+
+                    velocity.dLossdWeights.get(layer).get(neuron).set(weight, vf);
+                }
+
+                double vi = velocity.dLossdBiases.get(layer).get(neuron);
+                double wi = network.get(layer).get(neuron).getBias();
+                double wf = network.get(layer).get(neuron).getBias() + vi;
+                double wpi = mi.dLossdBiases.get(layer).get(neuron);
+                double wpf = mf.dLossdBiases.get(layer).get(neuron);
+                double wom = 0.5 * (a(wpi) + a(wpf)) * vi; //trapezoidal integral
+                double kf = wom + 0.5 * (vi * vi);
+                double df = (vi / Math.abs(vi)) * (kf / Math.abs(kf));
+                double vf = Math.sqrt(2 * Math.abs(kf)) * df;
+
+                velocity.dLossdBiases.get(layer).set(neuron, vf);
+            }
+        }
+
+
 
 //        for (int layer = 0; layer < network.size(); layer++) {
 //            for (int neuron = 0; neuron < network.get(layer).length(); neuron++) {
@@ -250,21 +278,18 @@ public class NeuralNetwork {
 
     //
     //given an update vector, updates this network accordingly
-    public void updateWeightsAndBiases(NetworkGradient updateVector, int layer, int neuron, int weight) {
-//        for (int layer = 0; layer < network.size(); layer++) {
-//            for (int neuron = 0; neuron < network.get(layer).length(); neuron++) {
-//
-//                Perceptron perceptron = network.get(layer).get(neuron);
-//
-//                for (int weight = 0; weight < perceptron.getWeights().length(); weight++) {
-//                    perceptron.getWeights().set(weight, perceptron.getWeights().get(weight) + updateVector.getdLossdWeights().get(layer).get(neuron).get(weight));
-//                }
-//                perceptron.updateBias(perceptron.getBias() + updateVector.getdLossdBiases().get(layer).get(neuron));
-//            }
-//        }
+    public void updateWeightsAndBiases(NetworkGradient updateVector) {
+        for (int layer = 0; layer < network.size(); layer++) {
+            for (int neuron = 0; neuron < network.get(layer).length(); neuron++) {
 
-        Perceptron p = network.get(layer).get(neuron);
-        p.updateWeight(weight, p.get(weight) + updateVector.getdLossdWeights().get(layer).get(neuron).get(weight));
+                Perceptron perceptron = network.get(layer).get(neuron);
+
+                for (int weight = 0; weight < perceptron.getWeights().length(); weight++) {
+                    perceptron.getWeights().set(weight, perceptron.getWeights().get(weight) + updateVector.getdLossdWeights().get(layer).get(neuron).get(weight));
+                }
+                perceptron.updateBias(perceptron.getBias() + updateVector.getdLossdBiases().get(layer).get(neuron));
+            }
+        }
     }
 
     //for the specified input-output pair, calculates the derivative of loss with respect to each weight and bias
