@@ -96,6 +96,8 @@ public class NeuralNetwork {
             previousLossGradient.add(getGradient(data.getInput(), data.getOutput()));
         }
 
+        double lossi;
+
         //initialize weight position
         network.get(0).get(0).getWeights().set(0, 0.1);
         velocity.dLossdWeights.get(0).get(0).set(0, initial_velocity);
@@ -124,7 +126,7 @@ public class NeuralNetwork {
             previousLossGradient = cumulativeLossGradient;
 
             epoch++;
-            Thread.sleep(500);
+            Thread.sleep(800);
 
         }
     }
