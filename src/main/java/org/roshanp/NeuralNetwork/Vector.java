@@ -24,6 +24,14 @@ public class Vector {
         return vector.length;
     }
 
+    public double magnitude() {
+        double s = 0;
+        for (double i : vector) {
+            s += i * i;
+        }
+        return Math.sqrt(s);
+    }
+
     public double get(int i) {
         return vector[i];
     }
@@ -161,6 +169,55 @@ public class Vector {
             if (get(i) != other.get(i)) return false;
         }
         return true;
+    }
+
+    //********************
+    //2D VECTOR OPERTATION
+    //********************
+
+    public Vector(double magnitude, double theta) {
+        this(new double[]{magnitude, 0});
+        rotateTo(theta);
+    }
+
+    public void rotateTo(double theta) {
+        theta = Math.PI - theta;
+        assert length() == 2;
+        double m = magnitude();
+        set(1, m * Math.cos(theta));
+        set(0, m * Math.sin(theta));
+    }
+
+    public double theta() {
+        return theta(get(1) / get(0));
+    }
+
+    public int quadrant() {
+        if (get(1) > 0) {
+            if (get(0) > 0) {
+                return 1;
+            } else if (get(0) < 0) {
+                return 2;
+            }
+        } else if (get(1) < 0) {
+            if (get(0) < 0) {
+                return 3;
+            } else if (get(0) > 0) {
+                return 4;
+            }
+        }
+        return -1;
+    }
+
+    public void set(double magnitude, double theta) {
+        set(0, magnitude);
+        set(1, 0);
+        rotateTo(theta);
+    }
+
+    //measured from the y-axis, vectors in the 4th quadrant are positive, vectors in the 3rd quadrant are negative
+    public static double theta(double wp) {
+        return -1 * Math.atan(1.0 / wp);
     }
 
 }

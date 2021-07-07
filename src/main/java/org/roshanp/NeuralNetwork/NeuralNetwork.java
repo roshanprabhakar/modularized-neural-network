@@ -5,6 +5,8 @@ import org.roshanp.NeuralNetwork.Activations.Sigmoid;
 import org.roshanp.NeuralNetwork.Visualizers.Chart;
 import org.roshanp.NeuralNetwork.Visualizers.ChartHolder;
 
+import java.awt.*;
+import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -23,6 +25,7 @@ public class NeuralNetwork {
     //learning parameters
     private double g; //gravitational acceleration
     private double initial_velocity; //initial step size
+    private double deprecation;
 
     /**
      * @param layers    layers[i] corresponds to the number of neurons at layer i in the network, where i is the layer index AFTER input
@@ -31,7 +34,7 @@ public class NeuralNetwork {
      * @param vi        initial velocity of training decent
      * @param activator type of activation function applied at every neuron
      */
-    public NeuralNetwork(int[] layers, int inputSize, double g, double vi, Activator activator, boolean randominit) {
+    public NeuralNetwork(int[] layers, int inputSize, double g, double vi, double deprecation, Activator activator, boolean randominit) {
         network = new ArrayList<>();
         network.add(new Layer(layers[0], inputSize, activator, randominit));
         for (int layer = 1; layer < layers.length; layer++) {
@@ -40,6 +43,7 @@ public class NeuralNetwork {
         this.inputSize = inputSize;
         this.g = g;
         this.initial_velocity = vi;
+        this.deprecation = deprecation;
     }
 
     /**
@@ -50,7 +54,7 @@ public class NeuralNetwork {
      * @param vi               initial velocity of training decent
      * @param activator        the activator applied at every neuron
      */
-    public NeuralNetwork(int inputSize, int neuronsPerHidden, int numHiddenLayers, double g, double vi, Activator activator, boolean randominit) {
+    public NeuralNetwork(int inputSize, int neuronsPerHidden, int numHiddenLayers, double g, double vi, double deprecation, Activator activator, boolean randominit) {
         network = new ArrayList<>();
         network.add(new Layer(neuronsPerHidden, inputSize, activator, randominit));
         for (int i = 0; i < numHiddenLayers - 1; i++) {
@@ -59,6 +63,7 @@ public class NeuralNetwork {
         this.inputSize = inputSize;
         this.g = g;
         this.initial_velocity = vi;
+        this.deprecation = deprecation;
     }
 
 
@@ -67,20 +72,18 @@ public class NeuralNetwork {
     public void train(ArrayList<NetworkData> trainingData, boolean verbose) throws InterruptedException {
 
         Chart lossChart = null;
-        Chart velocityChart = null;
-        Chart accelChart = null;
+        Chart xvelocityChart = null;
+        Chart yvelocityChart = null;
+//        Chart accelChart = null;
 
         if (verbose) {
-            lossChart = new Chart("Position", "weight", "loss", this);
-            lossChart.addSeries("weight");
+            lossChart = new Chart("Position", "weight", "loss", "weight");
+            xvelocityChart = new Chart("X velocity", "epoch", "Velocity", "velocity");
+//            accelChart = new Chart("Acceleration", "epoch", "Acceleration", "acceleration");
+            yvelocityChart = new Chart("Y velocity", "epoch", "Velocity", "velocity");
 
-            velocityChart = new Chart("Velocity", "epoch", "Velocity", this);
-            velocityChart.addSeries("velocity");
-
-            accelChart = new Chart("Acceleration", "epoch", "Acceleration", this);
-            accelChart.addSeries("acceleration");
-
-            ChartHolder holder = new ChartHolder(new ArrayList<>(Arrays.asList(lossChart, velocityChart, accelChart)), 2, 2);
+//            ChartHolder holder = new ChartHolder(new ArrayList<>(Arrays.asList(lossChart, xvelocityChart, yvelocityChart, accelChart)), 2, 2);
+            ChartHolder holder = new ChartHolder(new ArrayList<>(Arrays.asList(lossChart, xvelocityChart, yvelocityChart)), 2, 2);
             holder.setVisible(true);
         }
 
@@ -88,7 +91,10 @@ public class NeuralNetwork {
         double lossf;
         double accuracy;
 
-        NetworkGradient velocity = new NetworkGradient(this, initial_velocity);
+//        NetworkGradient velocity = new NetworkGradient(this, initial_velocity);
+//        Point2D.Double velocity = new Point2D.Double(initial_velocity, initial_velocity);
+//        Vector velocity = new Vector(new double[]{initial_velocity, initial_velocity});
+        Vector velocity = new Vector(new double[]{initial_velocity, initial_velocity});
 
         //initial iteration: step size is initial velocity
         NetworkGradient previousLossGradient = new NetworkGradient();
@@ -96,11 +102,9 @@ public class NeuralNetwork {
             previousLossGradient.add(getGradient(data.getInput(), data.getOutput()));
         }
 
-        double lossi;
-
         //initialize weight position
-        network.get(0).get(0).getWeights().set(0, 0.1);
-        velocity.dLossdWeights.get(0).get(0).set(0, initial_velocity);
+        network.get(0).get(0).getWeights().set(0, -20);
+//        velocity.dLossdWeights.get(0).get(0).set(0, initial_velocity);
 
         while (true) {
 
@@ -108,22 +112,23 @@ public class NeuralNetwork {
             for (NetworkData data : trainingData) {
                 cumulativeLossGradient.add(getGradient(data.getInput(), data.getOutput()));
             }
+            double lossi = cumulativeLoss(trainingData, this);
 
             updateWeightsAndBiases(velocity, 0, 0, 0);
 
-            double gradientMagnitude = getGradientMagnitude(cumulativeLossGradient);
             lossf = cumulativeLoss(trainingData, this);
 //            accuracy = getAccuracy(trainingData, this);
 
-            if (verbose) {
-               lossChart.update("weight", network.get(0).get(0).get(0), lossf);
-               velocityChart.update("velocity", epoch, velocity.dLossdWeights.get(0).get(0).get(0));
-               accelChart.update("acceleration", epoch, a(cumulativeLossGradient.dLossdWeights.get(0).get(0).get(0)));
-            }
-
-            updateVelocity(velocity, previousLossGradient, cumulativeLossGradient);
+            updateVelocity(velocity, previousLossGradient, cumulativeLossGradient, lossf, lossi, trainingData);
 
             previousLossGradient = cumulativeLossGradient;
+
+            if (verbose) {
+                lossChart.update(network.get(0).get(0).get(0), lossf);
+                xvelocityChart.update(epoch, velocity.get(0));
+                yvelocityChart.update(epoch, velocity.get(1));
+//                accelChart.update(epoch, ax(cumulativeLossGradient.dLossdWeights.get(0).get(0).get(0)));
+            }
 
             epoch++;
             Thread.sleep(800);
@@ -149,85 +154,119 @@ public class NeuralNetwork {
 
     /**
      * @param velocity velocity across every weight and bias dimension
+     * @param mi       initial loss gradient before current iteration
+     * @param mf       loss gradient after current iteration
      */
-    public void updateVelocity(NetworkGradient velocity, NetworkGradient mi, NetworkGradient mf) {
+    public void updateVelocity(Vector velocity, NetworkGradient mi, NetworkGradient mf, double lossi, double loss0, ArrayList<NetworkData> lossSet) {
 
-        double vi = velocity.dLossdWeights.get(0).get(0).get(0);
-        double wi = network.get(0).get(0).get(0);
-        double wf = network.get(0).get(0).get(0) + vi;
-        double wpi = mi.dLossdWeights.get(0).get(0).get(0);
-        double wpf = mf.dLossdWeights.get(0).get(0).get(0);
-        double wom = 0.5 * (a(wpi) + a(wpf)) * vi; //trapezoidal integral
-        double kf = wom + 0.5 * (vi * vi);
-        double df = (vi / Math.abs(vi)) * (kf / Math.abs(kf));
-        double vf = Math.sqrt(2 * Math.abs(kf)) * df;
+        System.out.println("----------------------------------");
 
-        velocity.dLossdWeights.get(0).get(0).set(0, vf);
+        double vxi = velocity.get(0);
+        double vyi = velocity.get(1);
+        double vi = velocity.magnitude();
 
-//        for (int layer = 0; layer < network.size(); layer++) {
-//            for (int neuron = 0; neuron < network.get(layer).length(); neuron++) {
-//                for (int weight = 0; weight < network.get(layer).get(neuron).getWeights().length(); weight++) {
-//                    velocity.dLossdWeights.get(layer).get(neuron).set(weight, v(
-//                            velocity.dLossdWeights.get(layer).get(neuron).get(weight),
-//                            olddLdWB.dLossdWeights.get(layer).get(neuron).get(weight),
-//                            dLdWB.dLossdWeights.get(layer).get(neuron).get(weight),
-//                            velocity.dLossdWeights.get(layer).get(neuron).get(weight)
-//                    ));
-//                }
-//                velocity.dLossdBiases.get(layer).set(neuron, v(
-//                        velocity.dLossdBiases.get(layer).get(neuron),
-//                        olddLdWB.dLossdBiases.get(layer).get(neuron),
-//                        dLdWB.dLossdBiases.get(layer).get(neuron),
-//                        velocity.dLossdBiases.get(layer).get(neuron)
-//                ));
-//            }
-//        }
+        double ki = vi * vi;
+        double wg = (lossi - loss0) * g;
+        double kf = ki + wg;
 
+        double dxf;
+        if (kf < 0) {
+            dxf = -1 * vxi / Math.abs(vxi);
+        } else {
+            dxf = vxi / Math.abs(vxi);
+        }
+        double vf = Math.sqrt(Math.abs(kf));
+        double tf = Vector.theta(mf.dLossdWeights.get(0).get(0).get(0));
+
+        if (dxf == 1) {
+            if (tf > 0) {
+                velocity.set(vf, tf);
+            } else if (tf < 0) {
+                velocity.set(vf, Math.PI - tf);
+            }
+        } else if (dxf == -1) {
+            if (tf > 0) {
+                velocity.set(vf, tf - Math.PI);
+            } else if (tf < 0) {
+                velocity.set(vf, tf);
+            }
+        }
+
+
+        network.get(0).get(0).accumulateWeight(0, velocity.get(0));
+
+        double actualLossf = cumulativeLoss(lossSet, this);
+        double predictedLossf = lossi + velocity.get(1);
+
+        if (lossi > actualLossf) {
+            if (actualLossf > predictedLossf) {
+
+
+
+                double r = (lossi - actualLossf) / (actualLossf - predictedLossf);
+                while (r < 0.5) {
+                    network.get(0).get(0).accumulateWeight(0, -velocity.get(0));
+                    velocity.multiplyScalar(deprecation);
+                    network.get(0).get(0).accumulateWeight(0, velocity.get(0));
+                    actualLossf = cumulativeLoss(lossSet, this);
+                    r = (lossi - actualLossf) / (actualLossf - (lossi + velocity.get(1)));
+                }
+
+
+
+            } else if (actualLossf < predictedLossf) {
+
+
+                velocity.set(1, velocity.get(1) - (predictedLossf - actualLossf));
+                velocity.set(0, velocity.get(0) + dxf * Math.tan(tf) * (predictedLossf - actualLossf));
+
+
+
+            }
+
+        } else if (lossi < actualLossf) {
+            if (actualLossf > predictedLossf) {
+
+
+
+                velocity.set(1, velocity.get(1) + (actualLossf - predictedLossf));
+                velocity.set(0, velocity.get(0) + dxf * Math.tan(-tf) * (actualLossf - predictedLossf));
+
+
+
+            } else if (actualLossf < predictedLossf) {
+
+
+
+                double r = (predictedLossf - actualLossf) / (actualLossf - lossi);
+                while (r > 0.5) {
+                    network.get(0).get(0).accumulateWeight(0, -velocity.get(0));
+                    velocity.multiplyScalar(deprecation);
+                    network.get(0).get(0).accumulateWeight(0, velocity.get(0));
+                    actualLossf = cumulativeLoss(lossSet, this);
+                    r = ((lossi + velocity.get(1)) - actualLossf) / (actualLossf - lossi);
+                }
+
+
+
+            }
+        }
+
+
+        System.out.println("----------------------------------");
     }
 
     /**
      * @param wp slope of loss against weight in the considered dimension
      * @return acceleration in current weight space
      */
-    private double a(double wp) {
-        return g / 2.0 * Math.sin(-2 * Math.atan(1 / wp));
+    private double ax(double wp) {
+        return g / 2.0 * Math.sin(2 * Vector.theta(wp));
     }
 
-    /**
-     * @param vh  velocity at previous iteration
-     * @param wph weight derivative at previous iteration
-     * @param wpi weight derivative at current iteration
-     * @param dw  change in weight from previous to current iterations
-     * @return current velocity
-     * <p>
-     * in the implemented update, dw = vh
-     */
-    private double v(double vh, double wph, double wpi, double dw) {
-
-        double ai = a(wpi);
-        double ah = a(wph);
-
-        double a = (ai * (ai / ah) + 1) / 2;
-        double b = (dw * ai) / (2 * ((ai / ah) + 1));
-
-        double dv;
-        if (ah < 0 && ai > 0) {
-            dv = a - b;
-        } else if (ah > 0 && ai < 0) {
-            dv = b - a;
-        } else {
-            dv = ((dw) / 2.0) * (ah + ai);
-        }
-
-
-        double vi = vh * vh + dv;
-        if (vi > 0) {
-            return Math.sqrt(vi);
-        } else if (vi < 0) {
-            return -1 * Math.sqrt(vi * -1);
-        } else {
-            return initial_velocity;
-        }
+    private double ay(double wp) {
+        double cos = Math.cos(Vector.theta(wp));
+        return g * cos * cos;
     }
 
     //given a gradient, calculates the magnitude of that gradient
@@ -250,7 +289,7 @@ public class NeuralNetwork {
 
     //
     //given an update vector, updates this network accordingly
-    public void updateWeightsAndBiases(NetworkGradient updateVector, int layer, int neuron, int weight) {
+    public void updateWeightsAndBiases(Vector v, int layer, int neuron, int weight) {
 //        for (int layer = 0; layer < network.size(); layer++) {
 //            for (int neuron = 0; neuron < network.get(layer).length(); neuron++) {
 //
@@ -264,7 +303,8 @@ public class NeuralNetwork {
 //        }
 
         Perceptron p = network.get(layer).get(neuron);
-        p.updateWeight(weight, p.get(weight) + updateVector.getdLossdWeights().get(layer).get(neuron).get(weight));
+//        p.updateWeight(weight, p.get(weight) + updateVector.getdLossdWeights().get(layer).get(neuron).get(weight));
+        p.accumulateWeight(weight, v.get(0));
     }
 
     //for the specified input-output pair, calculates the derivative of loss with respect to each weight and bias

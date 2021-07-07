@@ -4,6 +4,7 @@ package org.roshanp;
 import org.roshanp.NeuralNetwork.IrisData;
 import org.roshanp.NeuralNetwork.NetworkData;
 import org.roshanp.NeuralNetwork.NeuralNetwork;
+import org.roshanp.NeuralNetwork.Vector;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -26,7 +27,7 @@ public class NetworkExec {
 //            testData.add(data.get(i));
 //        }
 
-        NeuralNetwork network = new NeuralNetwork(new int[]{3}, 4, 5, 0.00000001, NeuralNetwork.sigmoid, false);
+        NeuralNetwork network = new NeuralNetwork(new int[]{3}, 4, -10, 0.00001, 0.7, NeuralNetwork.sigmoid, true);
         network.train(data, true);
 
 //        for (int i = 0; i < data.size(); i++) {

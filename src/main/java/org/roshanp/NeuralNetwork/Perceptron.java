@@ -45,6 +45,7 @@ public class Perceptron {
     public void updateWeight(int weight, double newWeight) {
         weights.set(weight, newWeight);
     }
+    public void accumulateWeight(int weight, double d) {weights.set(weight, weights.get(weight) + d);}
     public void updateBias(double newBias) {
         this.bias = newBias;
     }
