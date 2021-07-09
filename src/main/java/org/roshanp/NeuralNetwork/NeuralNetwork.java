@@ -5,8 +5,6 @@ import org.roshanp.NeuralNetwork.Activations.Sigmoid;
 import org.roshanp.NeuralNetwork.Visualizers.Chart;
 import org.roshanp.NeuralNetwork.Visualizers.ChartHolder;
 
-import java.awt.*;
-import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -24,8 +22,11 @@ public class NeuralNetwork {
 
     //learning parameters
     private double g; //gravitational acceleration
-    private double initial_velocity; //initial step size
+    private double initialVelocity; //initial step size
     private double deprecation;
+    private double uf;
+
+    private double lossBound;
 
     /**
      * @param layers    layers[i] corresponds to the number of neurons at layer i in the network, where i is the layer index AFTER input
@@ -34,7 +35,7 @@ public class NeuralNetwork {
      * @param vi        initial velocity of training decent
      * @param activator type of activation function applied at every neuron
      */
-    public NeuralNetwork(int[] layers, int inputSize, double g, double vi, double deprecation, Activator activator, boolean randominit) {
+    public NeuralNetwork(int[] layers, int inputSize, double g, double vi, double deprecation, Activator activator, boolean randominit, double kineticFriction) {
         network = new ArrayList<>();
         network.add(new Layer(layers[0], inputSize, activator, randominit));
         for (int layer = 1; layer < layers.length; layer++) {
@@ -42,8 +43,9 @@ public class NeuralNetwork {
         }
         this.inputSize = inputSize;
         this.g = g;
-        this.initial_velocity = vi;
+        this.initialVelocity = vi;
         this.deprecation = deprecation;
+        this.uf = kineticFriction;
     }
 
     /**
@@ -54,7 +56,7 @@ public class NeuralNetwork {
      * @param vi               initial velocity of training decent
      * @param activator        the activator applied at every neuron
      */
-    public NeuralNetwork(int inputSize, int neuronsPerHidden, int numHiddenLayers, double g, double vi, double deprecation, Activator activator, boolean randominit) {
+    public NeuralNetwork(int inputSize, int neuronsPerHidden, int numHiddenLayers, double g, double vi, double deprecation, Activator activator, boolean randominit, double kineticFriction) {
         network = new ArrayList<>();
         network.add(new Layer(neuronsPerHidden, inputSize, activator, randominit));
         for (int i = 0; i < numHiddenLayers - 1; i++) {
@@ -62,8 +64,9 @@ public class NeuralNetwork {
         }
         this.inputSize = inputSize;
         this.g = g;
-        this.initial_velocity = vi;
+        this.initialVelocity = vi;
         this.deprecation = deprecation;
+        this.uf = kineticFriction;
     }
 
 
@@ -94,7 +97,7 @@ public class NeuralNetwork {
 //        NetworkGradient velocity = new NetworkGradient(this, initial_velocity);
 //        Point2D.Double velocity = new Point2D.Double(initial_velocity, initial_velocity);
 //        Vector velocity = new Vector(new double[]{initial_velocity, initial_velocity});
-        Vector velocity = new Vector(new double[]{initial_velocity, initial_velocity});
+        Vector velocity = new Vector(new double[]{initialVelocity, 0});
 
         //initial iteration: step size is initial velocity
         NetworkGradient previousLossGradient = new NetworkGradient();
@@ -103,8 +106,10 @@ public class NeuralNetwork {
         }
 
         //initialize weight position
-        network.get(0).get(0).getWeights().set(0, -20);
+        network.get(0).get(0).getWeights().set(0, -10);
 //        velocity.dLossdWeights.get(0).get(0).set(0, initial_velocity);
+
+        lossBound = cumulativeLoss(trainingData, this);
 
         while (true) {
 
@@ -131,7 +136,7 @@ public class NeuralNetwork {
             }
 
             epoch++;
-            Thread.sleep(800);
+            Thread.sleep(100);
 
         }
     }
@@ -157,17 +162,16 @@ public class NeuralNetwork {
      * @param mi       initial loss gradient before current iteration
      * @param mf       loss gradient after current iteration
      */
-    public void updateVelocity(Vector velocity, NetworkGradient mi, NetworkGradient mf, double lossi, double loss0, ArrayList<NetworkData> lossSet) {
-
-        System.out.println("----------------------------------");
+    public void updateVelocity(Vector velocity, NetworkGradient mi, NetworkGradient mf, double lossi, double loss0, ArrayList<NetworkData> lossSet) throws InterruptedException {
 
         double vxi = velocity.get(0);
         double vyi = velocity.get(1);
         double vi = velocity.magnitude();
+        double dxi = vxi / Math.abs(vxi);
 
         double ki = vi * vi;
-        double wg = (lossi - loss0) * g;
-        double kf = ki + wg;
+        double nw = (lossi - loss0) * g - (uf * Math.sqrt((loss0 - lossi) * (loss0 - lossi) + (vxi * vxi)));
+        double kf = ki + nw;
 
         double dxf;
         if (kf < 0) {
@@ -192,68 +196,22 @@ public class NeuralNetwork {
             }
         }
 
-
         network.get(0).get(0).accumulateWeight(0, velocity.get(0));
-
         double actualLossf = cumulativeLoss(lossSet, this);
-        double predictedLossf = lossi + velocity.get(1);
 
-        if (lossi > actualLossf) {
-            if (actualLossf > predictedLossf) {
-
-
-
-                double r = (lossi - actualLossf) / (actualLossf - predictedLossf);
-                while (r < 0.5) {
-                    network.get(0).get(0).accumulateWeight(0, -velocity.get(0));
-                    velocity.multiplyScalar(deprecation);
-                    network.get(0).get(0).accumulateWeight(0, velocity.get(0));
-                    actualLossf = cumulativeLoss(lossSet, this);
-                    r = (lossi - actualLossf) / (actualLossf - (lossi + velocity.get(1)));
-                }
-
-
-
-            } else if (actualLossf < predictedLossf) {
-
-
-                velocity.set(1, velocity.get(1) - (predictedLossf - actualLossf));
-                velocity.set(0, velocity.get(0) + dxf * Math.tan(tf) * (predictedLossf - actualLossf));
-
-
-
-            }
-
-        } else if (lossi < actualLossf) {
-            if (actualLossf > predictedLossf) {
-
-
-
-                velocity.set(1, velocity.get(1) + (actualLossf - predictedLossf));
-                velocity.set(0, velocity.get(0) + dxf * Math.tan(-tf) * (actualLossf - predictedLossf));
-
-
-
-            } else if (actualLossf < predictedLossf) {
-
-
-
-                double r = (predictedLossf - actualLossf) / (actualLossf - lossi);
-                while (r > 0.5) {
-                    network.get(0).get(0).accumulateWeight(0, -velocity.get(0));
-                    velocity.multiplyScalar(deprecation);
-                    network.get(0).get(0).accumulateWeight(0, velocity.get(0));
-                    actualLossf = cumulativeLoss(lossSet, this);
-                    r = ((lossi + velocity.get(1)) - actualLossf) / (actualLossf - lossi);
-                }
-
-
-
-            }
+        int epoch = 0;
+        while (actualLossf > lossBound && epoch < 200) {
+            network.get(0).get(0).accumulateWeight(0, -velocity.get(0));
+            velocity.multiplyScalar(deprecation);
+            network.get(0).get(0).accumulateWeight(0, velocity.get(0));
+            actualLossf = cumulativeLoss(lossSet, this);
+            epoch++;
         }
+        network.get(0).get(0).accumulateWeight(0, -velocity.get(0));
 
-
-        System.out.println("----------------------------------");
+        if (dxi != dxf) {
+            lossBound = lossi;
+        }
     }
 
     /**

@@ -27,7 +27,7 @@ public class NetworkExec {
 //            testData.add(data.get(i));
 //        }
 
-        NeuralNetwork network = new NeuralNetwork(new int[]{3}, 4, -10, 0.00001, 0.7, NeuralNetwork.sigmoid, true);
+        NeuralNetwork network = new NeuralNetwork(new int[]{3}, 4, -10, 0.00001, 0.7, NeuralNetwork.sigmoid, true, 0.2);
         network.train(data, true);
 
 //        for (int i = 0; i < data.size(); i++) {
